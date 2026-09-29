@@ -1,0 +1,26 @@
+PYTHON ?= python3.14
+VENV := .venv
+BIN := $(VENV)/bin
+
+.PHONY: install lint format test clean
+
+install: $(BIN)/python
+	$(BIN)/pip install -r requirements.txt -e .
+	$(BIN)/pre-commit install
+
+$(BIN)/python:
+	$(PYTHON) -m venv $(VENV)
+
+lint:
+	$(BIN)/ruff check .
+	$(BIN)/ruff format --check .
+
+format:
+	$(BIN)/ruff check --fix .
+	$(BIN)/ruff format .
+
+test:
+	$(BIN)/pytest
+
+clean:
+	rm -rf .pytest_cache .ruff_cache
