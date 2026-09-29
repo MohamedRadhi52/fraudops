@@ -2,7 +2,7 @@ PYTHON ?= python3.14
 VENV := .venv
 BIN := $(VENV)/bin
 
-.PHONY: install lint format test data explore clean
+.PHONY: install lint format test data explore features clean
 
 install: $(BIN)/python
 	$(BIN)/pip install -r requirements.txt -e .
@@ -27,6 +27,9 @@ data:
 
 explore:
 	$(BIN)/python -m fraudops.explore
+
+features:
+	$(BIN)/python -m fraudops.features
 
 clean:
 	rm -rf .pytest_cache .ruff_cache

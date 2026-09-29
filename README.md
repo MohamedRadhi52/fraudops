@@ -52,6 +52,17 @@ Sept requêtes DuckDB, dans [`sql/`](sql), lancées par `make explore`. Voici le
 
 Enfin, le taux de fraude est le même la nuit et le jour, en semaine et le week-end (entre 0,84 % et 0,89 %) : contrairement au livre, le projet n'utilise pas de feature d'heure ni de jour.
 
+## Features
+
+`make features` calcule 12 features par transaction, en une vingtaine de secondes.
+
+| Famille | Fenêtres | Contenu |
+|---|---|---|
+| Client | 1, 7 et 30 jours | nombre de transactions et montant moyen, transaction scorée comprise |
+| Terminal | 1, 7 et 30 jours, décalées de 7 jours | nombre de transactions et taux de fraude |
+
+Le décalage des features terminal vient du délai d'étiquetage : une fraude n'est confirmée qu'après enquête, environ 7 jours plus tard. Une feature qui utiliserait les étiquettes des 7 derniers jours paraîtrait excellente hors ligne, mais serait impossible à calculer en production. Deux tests le vérifient : les features d'une transaction ne changent pas quand on supprime toutes les transactions postérieures, ni quand on inverse les étiquettes encore inconnues à sa date.
+
 ## Documentation
 
 - [Cadrage métier](docs/cadrage.md) : coûts, capacité d'investigation, métriques retenues.
