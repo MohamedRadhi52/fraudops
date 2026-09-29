@@ -13,3 +13,8 @@ make install   # crée .venv, installe les dépendances et les hooks pre-commit
 make lint
 make test
 ```
+
+## Documentation
+
+- [Cadrage métier](docs/cadrage.md) : coûts, capacité d'investigation, métriques retenues.
+- [Journal des décisions](docs/DECISIONS.md) : les choix du projet et leur raison.
