@@ -1,3 +1,8 @@
+# Data
+numpy==2.4.6
+pandas==2.3.3
+pyarrow==25.0.1
+
 # Development
 pre-commit==4.6.2
 pytest==9.1.1
