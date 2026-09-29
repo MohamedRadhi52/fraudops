@@ -19,3 +19,13 @@ Les choix structurants du projet, avec leur raison.
 - **Délai d'étiquetage de 7 jours pour les features terminal.** Une fraude n'est connue qu'après enquête : utiliser les étiquettes récentes serait une fuite qui gonfle les résultats hors ligne.
 - **Pas de feature d'heure ni de jour.** L'exploration montre le même taux de fraude la nuit, le jour et le week-end dans ce simulateur.
 - **Fenêtres définies à la seconde près.** Une fenêtre qui se termine à l'instant t contient toutes les transactions du client à cet instant, y compris celles de la même seconde, comme une fenêtre temporelle Spark.
+
+## PySpark
+
+- **pandas reste la version de référence.** Sur 1,8 M de transactions, pandas est plus rapide que Spark en local. La version Spark montre le passage à l'échelle, et un test garantit que les deux donnent les mêmes valeurs.
+- **Fenêtres Spark sur le temps en secondes.** `rangeBetween` s'applique à une colonne numérique : avec des secondes entières, les bornes des fenêtres sont exactes.
+
+## Environnement
+
+- **Python 3.14, pandas 2.3 et numpy 2.4.** PySpark 4.2 ne supporte pas encore pandas 3, et numpy 2.5 provoque des avertissements de dépréciation dans pandas 2.3.
+- **Java 21**, pris en charge par Spark 4 et disponible sur Ubuntu comme dans la CI.

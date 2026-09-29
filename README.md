@@ -6,23 +6,22 @@ Projet en cours de construction.
 
 ## Installation
 
-Prérequis : Python 3.14.
+Prérequis : Python 3.14, et Java 21 pour PySpark.
 
 ```bash
-make install   # crée .venv, installe les dépendances et les hooks pre-commit
-make lint
-make test
+make install    # crée .venv, installe les dépendances et les hooks pre-commit
+make test       # tests, dont l'égalité des features pandas et Spark
+make data       # génère data/transactions.parquet
+make explore    # lance les requêtes DuckDB de sql/
+make features   # calcule les features avec pandas
+make benchmark  # compare pandas et Spark sur le jeu complet
 ```
 
 ## Données
 
 ### Transactions carte simulées
 
-Le jeu principal est simulé avec les paramètres du *Reproducible Machine Learning for Credit Card Fraud Detection: Practical Handbook* (Le Borgne, Siblini, Lebichot et Bontempi, Université libre de Bruxelles, 2022) : 5 000 clients et 10 000 terminaux placés sur une grille, pendant 183 jours à partir du 1er avril 2018. Chaque client paie sur des terminaux proches de chez lui.
-
-```bash
-make data   # écrit data/transactions.parquet en quelques secondes
-```
+Le jeu principal est simulé avec les paramètres du *Reproducible Machine Learning for Credit Card Fraud Detection: Practical Handbook* (Le Borgne, Siblini, Lebichot et Bontempi, Université libre de Bruxelles, 2022) : 5 000 clients et 10 000 terminaux placés sur une grille, pendant 183 jours à partir du 1er avril 2018. Chaque client paie sur des terminaux proches de chez lui. `make data` génère le jeu en quelques secondes.
 
 Trois scénarios de fraude, repris du livre :
 
@@ -62,6 +61,18 @@ Enfin, le taux de fraude est le même la nuit et le jour, en semaine et le week-
 | Terminal | 1, 7 et 30 jours, décalées de 7 jours | nombre de transactions et taux de fraude |
 
 Le décalage des features terminal vient du délai d'étiquetage : une fraude n'est confirmée qu'après enquête, environ 7 jours plus tard. Une feature qui utiliserait les étiquettes des 7 derniers jours paraîtrait excellente hors ligne, mais serait impossible à calculer en production. Deux tests le vérifient : les features d'une transaction ne changent pas quand on supprime toutes les transactions postérieures, ni quand on inverse les étiquettes encore inconnues à sa date.
+
+## PySpark
+
+`src/fraudops/spark_features.py` calcule les mêmes features avec des fonctions de fenêtre Spark (`rangeBetween` sur le temps en secondes). Un test vérifie que les deux versions donnent les mêmes valeurs, et `make benchmark` compare leurs temps sur le jeu complet, en vérifiant de nouveau l'égalité sur les 1,8 M de transactions.
+
+| Étape | Temps |
+|---|---|
+| pandas | 15 s |
+| Spark : démarrage de la session | 9 s |
+| Spark : calcul et écriture | 32 s |
+
+Mesures faites sur une machine à 1 cœur et 4 Go de mémoire. À ce volume, pandas est plus rapide : Spark paie le démarrage de la JVM et l'organisation de ses tâches, sans rien paralléliser sur un seul cœur. Il devient utile quand les données ne tiennent plus dans la mémoire d'une machine, ou quand plusieurs cœurs ou machines se partagent le travail.
 
 ## Documentation
 

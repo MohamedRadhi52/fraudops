@@ -13,6 +13,10 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
       - run: make install PYTHON=python
       - run: make lint
       - run: make test
