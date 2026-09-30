@@ -2,7 +2,7 @@ PYTHON ?= python3.14
 VENV := .venv
 BIN := $(VENV)/bin
 
-.PHONY: install lint format test data explore features benchmark evaluate mlflow cost clean
+.PHONY: install lint format test data explore features benchmark evaluate mlflow cost calibration report clean
 
 install: $(BIN)/python
 	$(BIN)/pip install -r requirements.txt -e .
@@ -42,6 +42,11 @@ mlflow:
 
 cost:
 	$(BIN)/python -m fraudops.cost
+
+calibration:
+	$(BIN)/python -m fraudops.calibration
+
+report: evaluate cost calibration
 
 clean:
 	rm -rf .pytest_cache .ruff_cache

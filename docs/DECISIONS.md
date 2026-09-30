@@ -49,3 +49,9 @@ Les choix structurants du projet, avec leur raison.
 - **Coût calculé carte par carte et jour par jour.** Une carte contrôlée coûte 10 € ; une fraude coûte son montant si sa carte n'est ni contrôlée ce jour-là, ni déjà bloquée. Le blocage d'une carte évite ses fraudes suivantes, comme en production.
 - **Seuil choisi sur la validation, jamais sur le test.** Les courbes de test servent seulement à vérifier que le seuil choisi tombe près du minimum.
 - **Intervalle du coût par bootstrap des coûts journaliers**, comme pour les autres métriques.
+
+## Calibration
+
+- **Calibration isotonique ajustée sur les semaines de validation.** Elle ne suppose aucune forme de courbe, et la validation compte assez de fraudes (environ 1 200) pour l'estimer.
+- **Règle de perte attendue plutôt qu'un seuil sur la probabilité.** Contrôler une carte dès que probabilité × montant dépasse 10 € : le seuil découle des coûts au lieu d'être cherché, et le montant en jeu compte.
+- **Contre-exemple avec pondération des classes.** Le même LightGBM entraîné avec des poids équilibrés montre, chiffres à l'appui, pourquoi calibrer avant de décider.

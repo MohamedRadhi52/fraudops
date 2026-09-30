@@ -17,9 +17,10 @@ Résultats sur 8 semaines de test, avec des intervalles de confiance à 95 % obt
 
 **Ce qu'il faut retenir.**
 
-- Avec un seuil choisi pour minimiser le coût, LightGBM ramène le coût de la fraude de 300 k€ à 54 k€ sur 8 semaines, en contrôlant 35 cartes par jour sur les 100 possibles.
-- Il stoppe 95 à 100 % des fraudes repérables. L'essentiel de ce qui manque vient d'un terminal compromis dont aucune fraude n'est encore connue : tant que les premières étiquettes n'arrivent pas, ni le montant ni l'historique du client ne trahissent ces fraudes.
-- Face à la régression logistique, LightGBM gagne peu en Card Precision@100 (+0,4 point [0,2 ; 0,7]) mais 12 k€ de coût. Son avantage se joue sur les cartes les plus suspectes, là où se place le seuil : 97,7 % de fraudes parmi les 10 premières chaque jour, contre 93,9 %.
+- **Un coût divisé par 5,5.** Avec un seuil choisi pour minimiser le coût, LightGBM ramène le coût de la fraude de 300 k€ à 54 k€ sur 8 semaines, en contrôlant 35 cartes par jour sur les 100 possibles.
+- **Presque tout ce qui échappe est indétectable.** LightGBM stoppe 95 à 100 % des fraudes repérables. L'essentiel de ce qui manque vient d'un terminal compromis dont aucune fraude n'est encore connue : ni le montant ni l'historique du client ne trahissent ces fraudes.
+- **Des probabilités fiables.** Contrôler une carte dès que probabilité × montant dépasse 10 € coûte 52 k€, sans aucun seuil à régler. Entraîné avec pondération des classes, le même modèle gonflerait ses probabilités et coûterait 91 k€.
+- **LightGBM face à la régression logistique.** Il ne gagne que 0,4 point de Card Precision@100 [0,2 ; 0,7], mais 12 k€ de coût : son avantage se joue sur les cartes les plus suspectes, là où se place le seuil (97,7 % de fraudes parmi les 10 premières chaque jour, contre 93,9 %).
 
 Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, LightGBM, MLflow, pytest, GitHub Actions.
 
@@ -46,6 +47,20 @@ Pour chaque modèle, le seuil d'alerte qui minimise le coût est choisi sur les 
 
 Sous 15 contrôles par jour, les règles métier font mieux que LightGBM : elles traitent d'abord les gros montants, alors que LightGBM classe les cartes par probabilité de fraude, sans tenir compte du montant en jeu.
 
+## Calibration
+
+![Courbes de fiabilité, avant et après calibration](reports/figures/calibration.png)
+
+Un score qui alimente une décision doit être une vraie probabilité. C'est ce qui permet de contrôler une carte quand sa perte attendue, probabilité × montant, dépasse le coût d'un contrôle, sans chercher de seuil. La calibration isotonique est ajustée sur les semaines de validation (`make calibration`).
+
+| Variante | Score de Brier | Probabilité moyenne | Coût avec la règle de perte attendue |
+|---|---|---|---|
+| LightGBM | 0,00296 | 0,66 % | 52,0 k€ [48,5 ; 55,7], 28 contrôles par jour |
+| LightGBM pondéré | 0,02174 | 10,90 % | 91,3 k€ [87,7 ; 94,9], 100 contrôles par jour |
+| LightGBM pondéré, calibré | 0,00314 | 0,63 % | 53,5 k€ [49,8 ; 57,4], 30 contrôles par jour |
+
+Les semaines de test comptent 0,64 % de fraudes. Entraîné sans pondération des classes, LightGBM est déjà bien calibré : la calibration isotonique ne change presque rien (score de Brier de 0,00297), et la règle de perte attendue coûte 52,0 k€, un peu moins que le seuil optimisé de la section précédente, sans aucun réglage. Elle corrige aussi le défaut vu plus haut à faible volume, puisqu'elle tient compte du montant en jeu. Pondérer les classes, une pratique courante contre le déséquilibre, gonfle les probabilités : la règle contrôle alors 100 cartes par jour et coûte 91 k€. Une calibration ajustée sur la validation ramène ces probabilités au bon niveau (53,5 k€). D'où la règle retenue : pas de pondération ni de SMOTE, et une calibration vérifiée à chaque nouveau modèle.
+
 ## Détection
 
 ![Cartes frauduleuses parmi les 100 contrôlées chaque jour, par modèle](reports/figures/card_precision.png)
@@ -64,15 +79,17 @@ Avec LightGBM, l'équipe trouve en moyenne 19,5 cartes frauduleuses parmi les 10
 Prérequis : Python 3.14, et Java 21 pour PySpark (sous Ubuntu : `sudo apt install openjdk-21-jre-headless`).
 
 ```bash
-make install    # crée .venv, installe les dépendances et les hooks pre-commit
-make test       # tests, dont l'égalité des features pandas et Spark
-make data       # génère data/transactions.parquet
-make explore    # lance les requêtes DuckDB de sql/
-make features   # calcule les features avec pandas
-make benchmark  # compare pandas et Spark sur le jeu complet
-make evaluate   # entraîne et évalue les modèles, écrit reports/ (environ 3 minutes)
-make mlflow     # ouvre l'interface MLflow sur http://127.0.0.1:5000
-make cost       # choisit le seuil par le coût, écrit reports/
+make install      # crée .venv, installe les dépendances et les hooks pre-commit
+make test         # tests, dont l'égalité des features pandas et Spark
+make data         # génère data/transactions.parquet
+make explore      # lance les requêtes DuckDB de sql/
+make features     # calcule les features avec pandas
+make benchmark    # compare pandas et Spark sur le jeu complet
+make evaluate     # entraîne et évalue les modèles, écrit reports/ (environ 3 minutes)
+make mlflow       # ouvre l'interface MLflow sur http://127.0.0.1:5000
+make cost         # choisit le seuil par le coût, écrit reports/
+make calibration  # calibre les probabilités, écrit reports/
+make report       # evaluate, cost et calibration à la suite
 ```
 
 ## Données

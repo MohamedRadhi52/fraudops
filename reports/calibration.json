@@ -1,0 +1,55 @@
+{
+  "fraud_rate": 0.006404517595206942,
+  "lightgbm": {
+    "brier": 0.002961823726098593,
+    "mean_probability": 0.00660954217592707,
+    "expected_loss_rule": {
+      "threshold": null,
+      "controls_per_day": 28.375,
+      "cost": [
+        51969.659999999996,
+        48495.392,
+        55746.345499999996
+      ]
+    }
+  },
+  "lightgbm_calibrated": {
+    "brier": 0.0029665017158040695,
+    "mean_probability": 0.006462463148819025,
+    "expected_loss_rule": {
+      "threshold": null,
+      "controls_per_day": 30.0,
+      "cost": [
+        52229.78999999999,
+        48715.678499999995,
+        56046.90025
+      ]
+    }
+  },
+  "weighted": {
+    "brier": 0.021736026538686858,
+    "mean_probability": 0.10900623521315282,
+    "expected_loss_rule": {
+      "threshold": null,
+      "controls_per_day": 100.0,
+      "cost": [
+        91263.72,
+        87742.79375,
+        94882.5795
+      ]
+    }
+  },
+  "weighted_calibrated": {
+    "brier": 0.003143330715770532,
+    "mean_probability": 0.006278276324856852,
+    "expected_loss_rule": {
+      "threshold": null,
+      "controls_per_day": 29.892857142857142,
+      "cost": [
+        53470.979999999996,
+        49762.297,
+        57417.3285
+      ]
+    }
+  }
+}
