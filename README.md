@@ -74,6 +74,18 @@ Avec LightGBM, l'équipe trouve en moyenne 19,5 cartes frauduleuses parmi les 10
 | 2. Terminal compromis, aucune fraude encore connue | 8 % |
 | 3. Client compromis | 98 % |
 
+## Ce que le modèle regarde
+
+![Contribution moyenne de chaque variable au score de LightGBM](reports/figures/shap.png)
+
+Valeurs SHAP du modèle de production (`make explain`) : LightGBM entraîné sur les 28 derniers jours dont les étiquettes sont connues, puis expliqué sur la semaine suivante avec l'implémentation TreeSHAP de LightGBM.
+
+- **Sur toutes les transactions**, le modèle regarde surtout l'habitude de dépense du client (montant moyen sur 7 et 30 jours) : c'est elle qui situe une transaction ordinaire.
+- **Sur les 599 transactions qu'il signale** (72 % de fraudes), le montant et le taux de fraude du terminal sur 7 jours dominent : les signaux des scénarios de fraude.
+- **Un exemple.** Une transaction de 913,60 € d'un client qui dépense en moyenne 216 € sur 30 jours : perte attendue de 851 €, donc contrôle. Ses trois raisons sont le montant, puis la dépense moyenne du client sur 7 jours et sur 1 jour, déjà gonflées par 7 autres fraudes de la semaine, encore inconnues à cause du délai d'étiquetage. L'API renvoie ces trois raisons avec chaque score.
+
+**Limites.** SHAP explique le modèle, pas la fraude. Des variables corrélées se partagent le crédit de façon arbitraire : les taux de fraude du terminal sur 1, 7 et 30 jours portent en partie la même information. Et une variable peut en remplacer une autre, comme l'âge sur BAF : une explication qui ne cite pas une variable sensible ne prouve pas que le modèle l'ignore.
+
 ## Ouverture de compte (BAF)
 
 Le second jeu, Bank Account Fraud (Feedzai, NeurIPS 2022), contient 1 million de demandes d'ouverture de compte sur 8 mois, dont environ 1 % de fraudes, avec des attributs sensibles comme l'âge. Sa licence interdit l'usage commercial : le workflow [`baf.yml`](.github/workflows/baf.yml) le télécharge avec un jeton Kaggle gardé en secret, entraîne et évalue les modèles, puis publie seulement les métriques et les figures dans [`reports/baf/`](reports/baf/RESULTS.md). Les données ne sont jamais dans le dépôt.
@@ -110,6 +122,7 @@ make mlflow       # ouvre l'interface MLflow sur http://127.0.0.1:5000
 make cost         # choisit le seuil par le coût, écrit reports/
 make calibration  # calibre les probabilités, écrit reports/
 make report       # evaluate, cost et calibration à la suite
+make explain      # entraîne le modèle de production et calcule les valeurs SHAP
 make baf          # BAF, si data/baf/Base.csv a été téléchargé depuis Kaggle
 ```
 

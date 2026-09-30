@@ -69,3 +69,9 @@ Les choix structurants du projet, avec leur raison.
 - **Fairlearn pour l'audit, numpy pour le bootstrap.** MetricFrame prend environ une seconde par calcul sur 250 000 demandes ; les 1 000 tirages du ratio de FPR sont faits avec numpy, et un test vérifie que les deux donnent le même ratio.
 - **Groupes du papier : 50 ans et plus contre les autres**, puis le détail par tranche d'âge.
 - **Modèle sans l'âge entraîné à côté**, pour mesurer l'effet des variables qui portent la même information.
+
+## Explicabilité
+
+- **TreeSHAP intégré à LightGBM plutôt que la bibliothèque shap.** C'est le même algorithme, avec des valeurs exactes, et l'API n'a pas besoin d'une dépendance de plus.
+- **Importance mesurée sur deux populations** : toutes les transactions, et celles que le modèle signale. La moyenne sur toutes les transactions sous-estime les variables décisives sur peu de cas, comme le risque du terminal.
+- **Modèle de production versionné** (`models/lightgbm.txt`, 200 Ko) : l'API et l'image Docker l'utilisent tel quel.

@@ -40,15 +40,15 @@ def logistic_regression(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
     return model.predict_proba(test[FEATURES])[:, 1]
 
 
-def lightgbm(train: pd.DataFrame, test: pd.DataFrame, params: dict) -> np.ndarray:
-    """Fraud probability from LightGBM, stopped early on the last week of the training window."""
+def fit_lightgbm(train: pd.DataFrame, params: dict) -> LGBMClassifier:
+    """LightGBM stopped early on the last week of the training window."""
     last_week = train["tx_time_days"] > train["tx_time_days"].max() - 7
     fit, stop = train[~last_week], train[last_week]
     # deterministic: the same results whatever the number of threads of the machine.
     model = LGBMClassifier(
         n_estimators=1000, deterministic=True, force_row_wise=True, verbose=-1, **params
     )
-    model.fit(
+    return model.fit(
         fit[FEATURES],
         fit["tx_fraud"],
         eval_X=stop[FEATURES],
@@ -56,4 +56,8 @@ def lightgbm(train: pd.DataFrame, test: pd.DataFrame, params: dict) -> np.ndarra
         eval_metric="average_precision",
         callbacks=[early_stopping(50, verbose=False)],
     )
-    return model.predict_proba(test[FEATURES])[:, 1]
+
+
+def lightgbm(train: pd.DataFrame, test: pd.DataFrame, params: dict) -> np.ndarray:
+    """Fraud probability from LightGBM trained on the window."""
+    return fit_lightgbm(train, params).predict_proba(test[FEATURES])[:, 1]

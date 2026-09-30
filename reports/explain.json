@@ -1,0 +1,81 @@
+{
+  "alerts": 599,
+  "fraud_share_of_alerts": 0.7212020033388982,
+  "importance": {
+    "tx_amount": {
+      "all": 0.3858786317558625,
+      "alerts": 3.136336009496223
+    },
+    "terminal_risk_7d": {
+      "all": 0.07850003130899323,
+      "alerts": 2.5165263464960286
+    },
+    "customer_avg_amount_7d": {
+      "all": 0.30776661493061297,
+      "alerts": 0.6809727638387896
+    },
+    "terminal_risk_1d": {
+      "all": 0.02353939767691879,
+      "alerts": 0.6535468578200002
+    },
+    "terminal_risk_30d": {
+      "all": 0.03243243932748147,
+      "alerts": 0.64497095766901
+    },
+    "customer_avg_amount_30d": {
+      "all": 0.7518702520787314,
+      "alerts": 0.6436197346211568
+    },
+    "customer_avg_amount_1d": {
+      "all": 0.088731895864788,
+      "alerts": 0.2912273731835366
+    },
+    "terminal_nb_tx_1d": {
+      "all": 0.013183963427877341,
+      "alerts": 0.1396816980228092
+    },
+    "customer_nb_tx_7d": {
+      "all": 0.05023689538992323,
+      "alerts": 0.11345209448272074
+    },
+    "terminal_nb_tx_30d": {
+      "all": 0.0671880055149983,
+      "alerts": 0.08084034132494285
+    },
+    "terminal_nb_tx_7d": {
+      "all": 0.0240520324406453,
+      "alerts": 0.06566971050434751
+    },
+    "customer_nb_tx_30d": {
+      "all": 0.018313133986738426,
+      "alerts": 0.0480013797665538
+    },
+    "customer_nb_tx_1d": {
+      "all": 0.00982006583919138,
+      "alerts": 0.01854296583494403
+    }
+  },
+  "example": {
+    "features": {
+      "tx_amount": 913.6,
+      "customer_nb_tx_1d": 4,
+      "customer_avg_amount_1d": 535.2375,
+      "customer_nb_tx_7d": 11,
+      "customer_avg_amount_7d": 387.17,
+      "customer_nb_tx_30d": 28,
+      "customer_avg_amount_30d": 216.2207142857143,
+      "terminal_nb_tx_1d": 1,
+      "terminal_risk_1d": 0.0,
+      "terminal_nb_tx_7d": 12,
+      "terminal_risk_7d": 0.0,
+      "terminal_nb_tx_30d": 40,
+      "terminal_risk_30d": 0.0
+    },
+    "expected_loss": 851.4928567582491,
+    "reasons": {
+      "tx_amount": 6.713470601091734,
+      "customer_avg_amount_7d": 2.075918610881128,
+      "customer_avg_amount_1d": 0.539476551067511
+    }
+  }
+}
