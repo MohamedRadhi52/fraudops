@@ -9,8 +9,10 @@ CAPACITY = 100  # cards the team can investigate each day
 N_RESAMPLES = 1000
 
 
-def investigations(scored: pd.DataFrame, score: str, k: int = CAPACITY) -> pd.DataFrame:
-    """Cards investigated each day: the k most suspicious ones that are not blocked yet.
+def investigations(
+    scored: pd.DataFrame, score: str, k: int = CAPACITY, threshold: float = -np.inf
+) -> pd.DataFrame:
+    """Cards investigated each day: the k most suspicious ones above `threshold`, not blocked yet.
 
     A card's score is its highest transaction score of the day. The fraudulent cards found by
     the investigation are blocked and leave the following days.
@@ -20,10 +22,21 @@ def investigations(scored: pd.DataFrame, score: str, k: int = CAPACITY) -> pd.Da
     investigated = []
     for _, day_cards in cards.groupby(level="tx_time_days"):
         customers = day_cards.index.get_level_values("customer_id")
-        top = day_cards[~customers.isin(blocked)].nlargest(k, score)
+        candidates = day_cards[~customers.isin(blocked) & (day_cards[score] >= threshold)]
+        top = candidates.nlargest(k, score)
         investigated.append(top)
         blocked.update(top.index.get_level_values("customer_id")[top["tx_fraud"] == 1])
     return pd.concat(investigated)
+
+
+def stopped(frauds: pd.DataFrame, investigated: pd.DataFrame) -> pd.Series:
+    """Whether each fraud is stopped: its card is investigated that day, or blocked before."""
+    found = investigated[investigated["tx_fraud"] == 1].reset_index()
+    blocked_from = found.groupby("customer_id")["tx_time_days"].min()
+    that_day = pd.MultiIndex.from_frame(frauds[["tx_time_days", "customer_id"]]).isin(
+        investigated.index
+    )
+    return that_day | (frauds["customer_id"].map(blocked_from) < frauds["tx_time_days"])
 
 
 def card_precision(scored: pd.DataFrame, score: str, k: int = CAPACITY) -> pd.Series:

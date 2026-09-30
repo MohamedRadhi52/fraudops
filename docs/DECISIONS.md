@@ -43,3 +43,9 @@ Les choix structurants du projet, avec leur raison.
 - **Ni pondération des classes ni SMOTE.** Le classement n'en a pas besoin, et les probabilités restent exploitables pour la calibration.
 - **Entraînement déterministe** : les mêmes résultats quel que soit le nombre de cœurs de la machine.
 - **Part de fraudes stoppées par scénario.** Elle montre que l'écart au plafond vient des fraudes qu'aucune donnée ne permet encore de repérer, pas d'un défaut du modèle.
+
+## Seuil et coût
+
+- **Coût calculé carte par carte et jour par jour.** Une carte contrôlée coûte 10 € ; une fraude coûte son montant si sa carte n'est ni contrôlée ce jour-là, ni déjà bloquée. Le blocage d'une carte évite ses fraudes suivantes, comme en production.
+- **Seuil choisi sur la validation, jamais sur le test.** Les courbes de test servent seulement à vérifier que le seuil choisi tombe près du minimum.
+- **Intervalle du coût par bootstrap des coûts journaliers**, comme pour les autres métriques.

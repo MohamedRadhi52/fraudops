@@ -63,19 +63,10 @@ def tune_lightgbm(features: pd.DataFrame) -> dict:
 def share_stopped(test: pd.DataFrame, score: str) -> dict[str, float]:
     """Share of frauds stopped by the investigations, by scenario.
 
-    A fraud is stopped when its card is investigated that day, or was blocked earlier because an
-    investigation found a fraud on it. Scenario 2 is split: frauds on a terminal with a fraud
-    already known, and the others.
+    Scenario 2 is split: frauds on a terminal with a fraud already known, and the others.
     """
-    investigated = metrics.investigations(test, score)
-    found = investigated[investigated["tx_fraud"] == 1].reset_index()
-    blocked_from = found.groupby("customer_id")["tx_time_days"].min()
     frauds = test[test["tx_fraud"] == 1]
-    that_day = pd.MultiIndex.from_frame(frauds[["tx_time_days", "customer_id"]]).isin(
-        investigated.index
-    )
-    stopped = that_day | (frauds["customer_id"].map(blocked_from) < frauds["tx_time_days"])
-
+    stopped = metrics.stopped(frauds, metrics.investigations(test, score))
     group = "scenario " + frauds["tx_fraud_scenario"].astype(str)
     unknown_terminal = (frauds["tx_fraud_scenario"] == 2) & (frauds["terminal_risk_30d"] == 0)
     group = group.where(~unknown_terminal, "scenario 2, terminal without known fraud")

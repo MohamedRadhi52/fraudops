@@ -1,0 +1,57 @@
+{
+  "control_cost": 10,
+  "rules": {
+    "threshold": 1.0093182767988522,
+    "controls_per_day": 29.642857142857142,
+    "cost": [
+      85160.13,
+      80652.50175,
+      89668.26325
+    ]
+  },
+  "logistic": {
+    "threshold": 0.07976018896161441,
+    "controls_per_day": 39.32142857142857,
+    "cost": [
+      66257.2,
+      61449.950500000006,
+      71312.03675
+    ]
+  },
+  "lightgbm": {
+    "threshold": 0.0784299881968535,
+    "controls_per_day": 35.30357142857143,
+    "cost": [
+      54012.79,
+      50425.647,
+      57955.258499999996
+    ]
+  },
+  "lightgbm_full_capacity": {
+    "threshold": null,
+    "controls_per_day": 100.0,
+    "cost": [
+      85928.64,
+      82884.9825,
+      89241.84499999999
+    ]
+  },
+  "no_control": {
+    "threshold": null,
+    "controls_per_day": 0.0,
+    "cost": [
+      299566.30000000005,
+      279830.243,
+      320052.30525000003
+    ]
+  },
+  "perfect": {
+    "threshold": null,
+    "controls_per_day": 27.571428571428573,
+    "cost": [
+      15440.0,
+      14760.0,
+      16190.25
+    ]
+  }
+}

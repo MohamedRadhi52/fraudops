@@ -4,18 +4,22 @@
 
 Détection de fraude carte bancaire, évaluée comme en production : le modèle est ré-entraîné chaque semaine, une fraude n'est connue que 7 jours après la transaction, et l'équipe d'enquête ne peut contrôler que 100 cartes par jour.
 
-![Cartes frauduleuses parmi les 100 contrôlées chaque jour, par modèle](reports/figures/card_precision.png)
+![Coût de la fraude sur 8 semaines de test selon la stratégie](reports/figures/cost_by_strategy.png)
 
-| Modèle | Card Precision@100 | AUC-PR |
-|---|---|---|
-| Règles métier | 14,6 % [13,7 ; 15,6] | 0,37 [0,35 ; 0,39] |
-| Régression logistique | 19,1 % [18,1 ; 20,1] | 0,61 [0,58 ; 0,63] |
-| **LightGBM** | **19,5 %** [18,5 ; 20,5] | **0,66** [0,65 ; 0,68] |
-| Plafond (modèle parfait) | 27,6 % | 1 |
+| Modèle | Card Precision@100 | AUC-PR | Coût sur 8 semaines |
+|---|---|---|---|
+| Règles métier | 14,6 % [13,7 ; 15,6] | 0,37 [0,35 ; 0,39] | 85,2 k€ [80,7 ; 89,7] |
+| Régression logistique | 19,1 % [18,1 ; 20,1] | 0,61 [0,58 ; 0,63] | 66,3 k€ [61,4 ; 71,3] |
+| **LightGBM** | **19,5 %** [18,5 ; 20,5] | **0,66** [0,65 ; 0,68] | **54,0 k€** [50,4 ; 58,0] |
+| Modèle parfait | 27,6 % | 1 | 15,4 k€ [14,8 ; 16,2] |
 
-La Card Precision@100 est la part de vraies fraudes parmi les 100 cartes contrôlées chaque jour. Résultats sur 8 semaines de test, avec des intervalles de confiance à 95 % obtenus par bootstrap sur les 56 jours.
+Résultats sur 8 semaines de test, avec des intervalles de confiance à 95 % obtenus par bootstrap sur les 56 jours. La Card Precision@100 est la part de vraies fraudes parmi les 100 cartes contrôlées chaque jour. Le coût additionne 10 € par carte contrôlée et le montant des fraudes non stoppées.
 
-**Ce qu'il faut retenir.** LightGBM stoppe 95 à 100 % des fraudes repérables. Il ne manque que les fraudes d'un terminal compromis dont aucune fraude n'est encore connue (8 % stoppées) : tant que les premières étiquettes n'arrivent pas, ni le montant ni l'historique du client ne les trahissent. C'est l'essentiel de l'écart au plafond. Face à la régression logistique, le gain est net en AUC-PR mais faible en Card Precision@100 (+0,4 point [0,2 ; 0,7]) : ici, les features portent l'essentiel du signal.
+**Ce qu'il faut retenir.**
+
+- Avec un seuil choisi pour minimiser le coût, LightGBM ramène le coût de la fraude de 300 k€ à 54 k€ sur 8 semaines, en contrôlant 35 cartes par jour sur les 100 possibles.
+- Il stoppe 95 à 100 % des fraudes repérables. L'essentiel de ce qui manque vient d'un terminal compromis dont aucune fraude n'est encore connue : tant que les premières étiquettes n'arrivent pas, ni le montant ni l'historique du client ne trahissent ces fraudes.
+- Face à la régression logistique, LightGBM gagne peu en Card Precision@100 (+0,4 point [0,2 ; 0,7]) mais 12 k€ de coût. Son avantage se joue sur les cartes les plus suspectes, là où se place le seuil : 97,7 % de fraudes parmi les 10 premières chaque jour, contre 93,9 %.
 
 Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, LightGBM, MLflow, pytest, GitHub Actions.
 
@@ -25,6 +29,35 @@ Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook 
 - **Cartes bloquées.** Une carte dont une fraude est connue est bloquée et ses transactions ne sont plus scorées. Cela retire la moitié des fraudes des semaines de test, celles que la banque connaît déjà sans modèle, et ramène le plafond de la Card Precision@100 à 0,28.
 - **Règles métier.** Trois règles tirées de l'exploration : montant supérieur à 220 €, fraude récente déjà connue sur le terminal, montant trois fois supérieur à l'habitude du client. À égalité de règles, les plus gros montants passent en premier.
 - **LightGBM.** Arrêt précoce sur la dernière semaine de la fenêtre d'entraînement et 6 combinaisons d'hyperparamètres comparées sur les semaines de validation, toutes suivies dans MLflow (`make mlflow`).
+
+## Seuil et coût
+
+![Coût total selon le nombre de cartes contrôlées par jour](reports/figures/cost.png)
+
+Pour chaque modèle, le seuil d'alerte qui minimise le coût est choisi sur les semaines de validation, puis appliqué tel quel aux semaines de test (`make cost`). Les cartes au-dessus du seuil sont contrôlées, dans la limite de 100 par jour.
+
+| Stratégie | Coût sur 8 semaines | Contrôles par jour |
+|---|---|---|
+| Aucun contrôle | 299,6 k€ [279,8 ; 320,1] | 0 |
+| LightGBM, 100 contrôles chaque jour | 85,9 k€ [82,9 ; 89,2] | 100 |
+| LightGBM, seuil de 0,08 | 54,0 k€ [50,4 ; 58,0] | 35 |
+
+**Le seuil que je recommande : 0,08 sur la probabilité donnée par LightGBM.** Il divise le coût par 5,5 par rapport à l'absence de contrôle et économise 32 k€ sur 8 semaines par rapport à l'usage systématique des 100 contrôles : au-dessous de ce seuil, une carte a trop peu de chances d'être frauduleuse pour justifier un contrôle à 10 €. Il n'utilise qu'un tiers de la capacité. Le reste absorbe les pics de fraude et peut servir à des contrôles aléatoires, le seul moyen de mesurer la fraude que le modèle ne voit pas. Deux réserves : ce seuil dépend de l'hypothèse de 10 € par contrôle, et il doit être recalculé à chaque ré-entraînement, car il repose sur la distribution des scores.
+
+Sous 15 contrôles par jour, les règles métier font mieux que LightGBM : elles traitent d'abord les gros montants, alors que LightGBM classe les cartes par probabilité de fraude, sans tenir compte du montant en jeu.
+
+## Détection
+
+![Cartes frauduleuses parmi les 100 contrôlées chaque jour, par modèle](reports/figures/card_precision.png)
+
+Avec LightGBM, l'équipe trouve en moyenne 19,5 cartes frauduleuses parmi les 100 cartes qu'elle contrôle chaque jour, contre 27,6 pour un modèle parfait. Part des fraudes stoppées, c'est-à-dire dont la carte est contrôlée le jour même ou déjà bloquée :
+
+| Scénario | Fraudes stoppées |
+|---|---|
+| 1. Montant supérieur à 220 € | 100 % |
+| 2. Terminal compromis, fraude déjà connue sur ce terminal | 95 % |
+| 2. Terminal compromis, aucune fraude encore connue | 8 % |
+| 3. Client compromis | 98 % |
 
 ## Installation
 
@@ -39,6 +72,7 @@ make features   # calcule les features avec pandas
 make benchmark  # compare pandas et Spark sur le jeu complet
 make evaluate   # entraîne et évalue les modèles, écrit reports/ (environ 3 minutes)
 make mlflow     # ouvre l'interface MLflow sur http://127.0.0.1:5000
+make cost       # choisit le seuil par le coût, écrit reports/
 ```
 
 ## Données
