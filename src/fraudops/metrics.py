@@ -9,22 +9,26 @@ CAPACITY = 100  # cards the team can investigate each day
 N_RESAMPLES = 1000
 
 
-def card_precision(scored: pd.DataFrame, score: str, k: int = CAPACITY) -> pd.Series:
-    """Card Precision@k of each day: share of frauds among the k most suspicious cards.
+def investigations(scored: pd.DataFrame, score: str, k: int = CAPACITY) -> pd.DataFrame:
+    """Cards investigated each day: the k most suspicious ones that are not blocked yet.
 
     A card's score is its highest transaction score of the day. The fraudulent cards found by
     the investigation are blocked and leave the following days.
     """
     cards = scored.groupby(["tx_time_days", "customer_id"])[[score, "tx_fraud"]].max()
     blocked = set()
-    precision = {}
-    for day, day_cards in cards.groupby(level="tx_time_days"):
-        day_cards = day_cards.droplevel("tx_time_days")
-        top = day_cards[~day_cards.index.isin(blocked)].nlargest(k, score)
-        found = top.index[top["tx_fraud"] == 1]
-        precision[day] = len(found) / k
-        blocked.update(found)
-    return pd.Series(precision)
+    investigated = []
+    for _, day_cards in cards.groupby(level="tx_time_days"):
+        customers = day_cards.index.get_level_values("customer_id")
+        top = day_cards[~customers.isin(blocked)].nlargest(k, score)
+        investigated.append(top)
+        blocked.update(top.index.get_level_values("customer_id")[top["tx_fraud"] == 1])
+    return pd.concat(investigated)
+
+
+def card_precision(scored: pd.DataFrame, score: str, k: int = CAPACITY) -> pd.Series:
+    """Card Precision@k of each day: share of frauds among the k cards investigated."""
+    return investigations(scored, score, k).groupby(level="tx_time_days")["tx_fraud"].sum() / k
 
 
 def auc_pr_of_days(scored: pd.DataFrame, score: str) -> Callable[[np.ndarray], float]:
@@ -62,3 +66,13 @@ def summarize(scored: pd.DataFrame, score: str) -> dict[str, list[float]]:
         "card_precision": [daily.mean(), *bootstrap_interval(lambda d: daily[d].mean(), days)],
         "auc_pr": [auc_pr(days), *bootstrap_interval(auc_pr, days)],
     }
+
+
+def paired_difference(scored: pd.DataFrame, score: str, baseline: str) -> list[float]:
+    """Card Precision@100 of `score` minus `baseline`, as [value, low, high].
+
+    Both models are compared on the same resampled days (paired bootstrap).
+    """
+    difference = card_precision(scored, score) - card_precision(scored, baseline)
+    days = difference.index.to_numpy()
+    return [difference.mean(), *bootstrap_interval(lambda d: difference[d].mean(), days)]

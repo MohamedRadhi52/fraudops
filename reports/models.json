@@ -23,7 +23,41 @@
         0.5840965084196829,
         0.6270015647038466
       ]
+    },
+    "lightgbm": {
+      "card_precision": [
+        0.19499999999999998,
+        0.18517857142857141,
+        0.20482142857142854
+      ],
+      "auc_pr": [
+        0.6633778004652008,
+        0.6453604742893382,
+        0.6806544064541237
+      ]
     }
   },
-  "card_precision_ceiling": 0.2757142857142857
+  "card_precision_ceiling": 0.2757142857142857,
+  "lightgbm_params": {
+    "num_leaves": 15,
+    "learning_rate": 0.05
+  },
+  "lightgbm_card_precision_gain": {
+    "rules": [
+      0.049464285714285704,
+      0.04267857142857142,
+      0.05679017857142856
+    ],
+    "logistic": [
+      0.004464285714285717,
+      0.0016071428571428602,
+      0.007321428571428574
+    ]
+  },
+  "lightgbm_share_of_frauds_stopped": {
+    "scenario 1": 1.0,
+    "scenario 2": 0.9521484375,
+    "scenario 2, terminal without known fraud": 0.08303886925795052,
+    "scenario 3": 0.9834586466165414
+  }
 }

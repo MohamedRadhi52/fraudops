@@ -8,19 +8,23 @@ Détection de fraude carte bancaire, évaluée comme en production : le modèle 
 
 | Modèle | Card Precision@100 | AUC-PR |
 |---|---|---|
-| Règles métier | 0,15 [0,14 ; 0,16] | 0,37 [0,35 ; 0,39] |
-| Régression logistique | 0,19 [0,18 ; 0,20] | 0,61 [0,58 ; 0,63] |
-| Plafond (modèle parfait) | 0,28 | 1 |
+| Règles métier | 14,6 % [13,7 ; 15,6] | 0,37 [0,35 ; 0,39] |
+| Régression logistique | 19,1 % [18,1 ; 20,1] | 0,61 [0,58 ; 0,63] |
+| **LightGBM** | **19,5 %** [18,5 ; 20,5] | **0,66** [0,65 ; 0,68] |
+| Plafond (modèle parfait) | 27,6 % | 1 |
 
 La Card Precision@100 est la part de vraies fraudes parmi les 100 cartes contrôlées chaque jour. Résultats sur 8 semaines de test, avec des intervalles de confiance à 95 % obtenus par bootstrap sur les 56 jours.
 
-Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, pytest, GitHub Actions.
+**Ce qu'il faut retenir.** LightGBM stoppe 95 à 100 % des fraudes repérables. Il ne manque que les fraudes d'un terminal compromis dont aucune fraude n'est encore connue (8 % stoppées) : tant que les premières étiquettes n'arrivent pas, ni le montant ni l'historique du client ne les trahissent. C'est l'essentiel de l'écart au plafond. Face à la régression logistique, le gain est net en AUC-PR mais faible en Card Precision@100 (+0,4 point [0,2 ; 0,7]) : ici, les features portent l'essentiel du signal.
+
+Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, LightGBM, MLflow, pytest, GitHub Actions.
 
 ## Méthode
 
 - **Validation préquentielle.** Chaque semaine, le modèle est ré-entraîné sur les 28 derniers jours dont les étiquettes sont connues, puis score la semaine suivante. Les 4 premières semaines servent aux réglages, les 8 suivantes aux résultats.
 - **Cartes bloquées.** Une carte dont une fraude est connue est bloquée et ses transactions ne sont plus scorées. Cela retire la moitié des fraudes des semaines de test, celles que la banque connaît déjà sans modèle, et ramène le plafond de la Card Precision@100 à 0,28.
 - **Règles métier.** Trois règles tirées de l'exploration : montant supérieur à 220 €, fraude récente déjà connue sur le terminal, montant trois fois supérieur à l'habitude du client. À égalité de règles, les plus gros montants passent en premier.
+- **LightGBM.** Arrêt précoce sur la dernière semaine de la fenêtre d'entraînement et 6 combinaisons d'hyperparamètres comparées sur les semaines de validation, toutes suivies dans MLflow (`make mlflow`).
 
 ## Installation
 
@@ -33,7 +37,8 @@ make data       # génère data/transactions.parquet
 make explore    # lance les requêtes DuckDB de sql/
 make features   # calcule les features avec pandas
 make benchmark  # compare pandas et Spark sur le jeu complet
-make evaluate   # entraîne et évalue les modèles, écrit reports/
+make evaluate   # entraîne et évalue les modèles, écrit reports/ (environ 3 minutes)
+make mlflow     # ouvre l'interface MLflow sur http://127.0.0.1:5000
 ```
 
 ## Données

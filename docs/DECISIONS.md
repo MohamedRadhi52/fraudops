@@ -36,3 +36,10 @@ Les choix structurants du projet, avec leur raison.
 - **Cartes connues bloquées pendant les semaines de test**, comme dans le Handbook. Le modèle est jugé sur les fraudes que la banque ne connaît pas encore, ce qui divise par deux le nombre de fraudes à trouver.
 - **Semaines de validation distinctes des semaines de test.** Règles, hyperparamètres, seuil et calibration sont choisis sur les 4 semaines de validation ; les 8 semaines de test ne servent qu'aux résultats.
 - **Bootstrap de l'AUC-PR par pondération des jours.** Les transactions sont triées une seule fois, puis chaque tirage pondère les jours par leur nombre de tirages. Le résultat est identique à scikit-learn, une vingtaine de fois plus vite.
+
+## LightGBM
+
+- **Réglage restreint à 6 combinaisons**, départagées par l'AUC-PR de validation, plus stable que la Card Precision@100 sur 4 semaines. Chaque combinaison est suivie dans MLflow.
+- **Ni pondération des classes ni SMOTE.** Le classement n'en a pas besoin, et les probabilités restent exploitables pour la calibration.
+- **Entraînement déterministe** : les mêmes résultats quel que soit le nombre de cœurs de la machine.
+- **Part de fraudes stoppées par scénario.** Elle montre que l'écart au plafond vient des fraudes qu'aucune donnée ne permet encore de repérer, pas d'un défaut du modèle.

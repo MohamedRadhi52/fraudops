@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+from lightgbm import LGBMClassifier, early_stopping
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -12,6 +13,9 @@ FEATURES = [
     "tx_amount",
     *[f"customer_{stat}_{days}d" for days in WINDOWS for stat in ("nb_tx", "avg_amount")],
     *[f"terminal_{stat}_{days}d" for days in WINDOWS for stat in ("nb_tx", "risk")],
+]
+LIGHTGBM_GRID = [
+    {"num_leaves": leaves, "learning_rate": rate} for leaves in (15, 31, 63) for rate in (0.05, 0.1)
 ]
 
 
@@ -33,4 +37,23 @@ def logistic_regression(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
     """Fraud probability from a logistic regression on standardized features."""
     model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
     model.fit(train[FEATURES], train["tx_fraud"])
+    return model.predict_proba(test[FEATURES])[:, 1]
+
+
+def lightgbm(train: pd.DataFrame, test: pd.DataFrame, params: dict) -> np.ndarray:
+    """Fraud probability from LightGBM, stopped early on the last week of the training window."""
+    last_week = train["tx_time_days"] > train["tx_time_days"].max() - 7
+    fit, stop = train[~last_week], train[last_week]
+    # deterministic: the same results whatever the number of threads of the machine.
+    model = LGBMClassifier(
+        n_estimators=1000, deterministic=True, force_row_wise=True, verbose=-1, **params
+    )
+    model.fit(
+        fit[FEATURES],
+        fit["tx_fraud"],
+        eval_X=stop[FEATURES],
+        eval_y=stop["tx_fraud"],
+        eval_metric="average_precision",
+        callbacks=[early_stopping(50, verbose=False)],
+    )
     return model.predict_proba(test[FEATURES])[:, 1]
