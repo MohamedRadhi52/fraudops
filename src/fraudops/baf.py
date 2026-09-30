@@ -15,6 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from fraudops import fairness
 from fraudops.metrics import bootstrap_interval, format_interval, rates, threshold_at_fpr
 
 BAF_PATH = Path("data/baf/Base.csv")
@@ -23,6 +24,7 @@ REPORT_DIR = Path("reports/baf")
 LABEL = "fraud_bool"
 CATEGORICAL = ["payment_type", "employment_status", "housing_status", "source", "device_os"]
 LABELS = {"logistic": "Régression logistique", "lightgbm": "LightGBM"}
+WITHOUT_AGE = ("customer_age",)
 
 
 def load(path: Path = BAF_PATH) -> pd.DataFrame:
@@ -36,20 +38,22 @@ def split(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
     return data[month <= 4], data[month == 5], data[month >= 6]
 
 
-def inputs(data: pd.DataFrame) -> pd.DataFrame:
+def inputs(data: pd.DataFrame, drop: tuple[str, ...] = ()) -> pd.DataFrame:
     """Model inputs: every column but the label and the month, which only serves to split."""
-    return data.drop(columns=[LABEL, "month"])
+    return data.drop(columns=[LABEL, "month", *drop])
 
 
-def lightgbm(train: pd.DataFrame, validation: pd.DataFrame) -> LGBMClassifier:
-    """LightGBM stopped early on the validation month."""
+def lightgbm(
+    train: pd.DataFrame, validation: pd.DataFrame, drop: tuple[str, ...] = ()
+) -> LGBMClassifier:
+    """LightGBM stopped early on the validation month, without the columns in `drop`."""
     model = LGBMClassifier(
         n_estimators=2000, learning_rate=0.05, deterministic=True, force_row_wise=True, verbose=-1
     )
     return model.fit(
-        inputs(train),
+        inputs(train, drop),
         train[LABEL],
-        eval_X=inputs(validation),
+        eval_X=inputs(validation, drop),
         eval_y=validation[LABEL],
         eval_metric="auc",
         callbacks=[early_stopping(100, verbose=False)],
@@ -132,8 +136,22 @@ def results_table(report: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def fairness_frame(
+    part: pd.DataFrame, score: np.ndarray, without_age: LGBMClassifier
+) -> pd.DataFrame:
+    """Columns expected by the fairness report, for the validation or the test months."""
+    return pd.DataFrame(
+        {
+            "label": part[LABEL].to_numpy(),
+            "age": part["customer_age"].to_numpy(),
+            "score": score,
+            "score_without_age": without_age.predict_proba(inputs(part, WITHOUT_AGE))[:, 1],
+        }
+    )
+
+
 def run(data: pd.DataFrame) -> tuple[dict, LGBMClassifier]:
-    """Train both models and evaluate them on the test months."""
+    """Train the models, evaluate them on the test months, and audit their fairness by age."""
     train, validation, test = split(data)
     models = {"logistic": logistic_regression(train), "lightgbm": lightgbm(train, validation)}
     scores = {
@@ -148,20 +166,36 @@ def run(data: pd.DataFrame) -> tuple[dict, LGBMClassifier]:
             "test": test[LABEL].mean(),
         },
     } | evaluate(validation, test, scores)
+
+    # The same model without age shows whether correlated variables keep the gap.
+    without_age = lightgbm(train, validation, drop=WITHOUT_AGE)
+    frames = [
+        fairness_frame(part, score, without_age)
+        for part, score in zip((validation, test), scores["lightgbm"], strict=True)
+    ]
+    report["fairness"] = fairness.fairness_report(*frames)
     return report, models["lightgbm"]
 
 
 def main() -> None:
     report, model = run(load())
     model.booster_.save_model(MODEL_PATH)
-    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    (REPORT_DIR / "figures").mkdir(parents=True, exist_ok=True)
     (REPORT_DIR / "metrics.json").write_text(json.dumps(report, indent=2) + "\n")
-    table = results_table(report)
-    (REPORT_DIR / "RESULTS.md").write_text(
-        "# Résultats sur BAF\n\nGénéré par le workflow `baf.yml` sur la variante Base, "
-        "qui n'est jamais publiée.\n\n" + table
+    fairness.plot_fpr_by_age(report["fairness"], REPORT_DIR / "figures" / "fpr_by_age.png")
+    fairness.plot_tradeoff(report["fairness"], REPORT_DIR / "figures" / "tradeoff.png")
+    loss = format_interval(*report["fairness"]["mitigation_recall_loss"], percent=True)
+    results = (
+        "# Résultats sur BAF\n\n"
+        "Généré par le workflow `baf.yml` sur la variante Base, qui n'est jamais publiée.\n\n"
+        "## Performance\n\n"
+        + results_table(report)
+        + "\n## Équité entre groupes d'âge\n\n"
+        + fairness.results_table(report["fairness"])
+        + f"\nRappel perdu avec un seuil par groupe : {loss}.\n"
     )
-    print(table)
+    (REPORT_DIR / "RESULTS.md").write_text(results)
+    print(results)
 
 
 if __name__ == "__main__":

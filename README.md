@@ -22,7 +22,7 @@ Résultats sur 8 semaines de test, avec des intervalles de confiance à 95 % obt
 - **Des probabilités fiables.** Contrôler une carte dès que probabilité × montant dépasse 10 € coûte 52 k€, sans aucun seuil à régler. Entraîné avec pondération des classes, le même modèle gonflerait ses probabilités et coûterait 91 k€.
 - **LightGBM face à la régression logistique.** Il ne gagne que 0,4 point de Card Precision@100 [0,2 ; 0,7], mais 12 k€ de coût : son avantage se joue sur les cartes les plus suspectes, là où se place le seuil (97,7 % de fraudes parmi les 10 premières chaque jour, contre 93,9 %).
 
-Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, LightGBM, MLflow, pytest, GitHub Actions.
+Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, LightGBM, MLflow, Fairlearn, pytest, GitHub Actions.
 
 ## Méthode
 
@@ -81,6 +81,18 @@ Le second jeu, Bank Account Fraud (Feedzai, NeurIPS 2022), contient 1 million de
 - **Protocole.** Entraînement sur les mois 0 à 4, arrêt précoce et choix du seuil sur le mois 5, test sur les mois 6 et 7. Le seuil signale 5 % des demandes légitimes du mois de validation, puis reste fixe : le taux de faux positifs obtenu sur le test mesure l'effet de la dérive dans le temps.
 - **Comparaison avec le papier.** Le papier fixe le seuil sur le test lui-même. Cette mesure est donnée aussi, pour comparer.
 - **Intervalles de confiance.** Bootstrap sur les demandes, apparié entre modèles pour le gain de LightGBM.
+
+### Équité entre groupes d'âge
+
+![Compromis entre rappel et égalité des faux positifs selon l'âge](reports/baf/figures/tradeoff.png)
+
+Refuser à tort une demande légitime pénalise un client. La métrique d'équité du papier BAF compare donc les taux de faux positifs (FPR) des demandeurs de 50 ans et plus et des autres : le ratio vaut 1 quand les deux groupes sont signalés à tort aussi souvent.
+
+- **Atténuation.** Un seuil par groupe d'âge, chacun réglé pour signaler 5 % des demandes légitimes du groupe sur le mois de validation. C'est le principe du `ThresholdOptimizer` de Fairlearn, appliqué directement au point de fonctionnement du protocole, que cet outil ne permet pas d'imposer. Le compromis est chiffré : ratio de FPR avant et après, et rappel perdu.
+- **Retirer l'âge ne suffit pas.** Le workflow entraîne aussi le modèle sans la variable d'âge, pour mesurer ce qui reste de l'écart quand d'autres variables portent la même information (revenu, statut d'emploi, ancienneté à l'adresse).
+- **Qui décide ?** Le data scientist mesure et montre le compromis ; le choix entre rappel et égalité des faux positifs revient au métier, à la conformité et au juridique. Les définitions de l'équité sont d'ailleurs incompatibles entre elles quand les taux de fraude diffèrent selon l'âge : on ne peut pas égaliser à la fois les faux positifs, les faux négatifs et la calibration. Le règlement européen sur l'IA exclut la détection de fraude financière des systèmes à haut risque, mais le droit de la non-discrimination et le RGPD s'appliquent.
+
+![Demandes légitimes signalées par tranche d'âge](reports/baf/figures/fpr_by_age.png)
 
 ## Installation
 

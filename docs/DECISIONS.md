@@ -62,3 +62,10 @@ Les choix structurants du projet, avec leur raison.
 - **Seuil fixé sur le mois de validation, puis gardé sur le test.** C'est plus strict que le papier, qui fixe le seuil sur le test lui-même ; les deux mesures sont publiées.
 - **Bootstrap sur les demandes**, indépendantes entre elles, et apparié entre modèles.
 - **Colonnes catégorielles typées** plutôt qu'encodées en entiers : LightGBM les traite nativement et la régression logistique les encode en one-hot.
+
+## Équité
+
+- **Un seuil par groupe plutôt que le ThresholdOptimizer.** Fairlearn maximise un objectif sans pouvoir fixer le FPR global à 5 %, point de fonctionnement du protocole BAF. Les seuils sont donc calculés directement, un par groupe, à 5 % de FPR sur la validation.
+- **Fairlearn pour l'audit, numpy pour le bootstrap.** MetricFrame prend environ une seconde par calcul sur 250 000 demandes ; les 1 000 tirages du ratio de FPR sont faits avec numpy, et un test vérifie que les deux donnent le même ratio.
+- **Groupes du papier : 50 ans et plus contre les autres**, puis le détail par tranche d'âge.
+- **Modèle sans l'âge entraîné à côté**, pour mesurer l'effet des variables qui portent la même information.

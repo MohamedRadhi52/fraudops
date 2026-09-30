@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from fraudops.baf import load, run
 from fraudops.features import build_features
 from fraudops.simulate import generate_dataset
 
@@ -73,3 +74,9 @@ def fake_baf_csv(tmp_path_factory):
     path = tmp_path_factory.mktemp("baf") / "Base.csv"
     fake_baf(20_000, seed=0).to_csv(path, index=False)
     return path
+
+
+@pytest.fixture(scope="session")
+def baf_report(fake_baf_csv):
+    """Report of the whole BAF pipeline run on the fake sample."""
+    return run(load(fake_baf_csv))[0]
