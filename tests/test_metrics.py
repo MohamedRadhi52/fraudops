@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from sklearn.metrics import average_precision_score
 
-from fraudops.metrics import auc_pr_of_days, bootstrap_interval, card_precision
+from fraudops.metrics import auc_pr_of_days, bootstrap_interval, card_precision, psi
 
 
 def test_card_precision_ranks_cards_and_blocks_the_frauds_found():
@@ -34,3 +34,16 @@ def test_bootstrap_interval_surrounds_the_estimate():
     low, high = bootstrap_interval(lambda days: values[days].mean(), values.index.to_numpy())
     assert low < values.mean() < high
     assert high - low < 1
+
+
+def test_psi_is_zero_without_drift_and_large_after_a_shift():
+    rng = np.random.default_rng(0)
+    reference = pd.Series(rng.normal(0, 1, 100_000))
+    assert psi(reference, pd.Series(rng.normal(0, 1, 50_000))) < 0.01
+    assert psi(reference, pd.Series(rng.normal(1, 1, 50_000))) > 0.25
+
+
+def test_psi_compares_binary_variables_value_by_value():
+    rng = np.random.default_rng(0)
+    reference = pd.Series(rng.random(100_000) < 0.5).astype(int)
+    assert psi(reference, pd.Series(rng.random(50_000) < 0.7).astype(int)) > 0.1

@@ -15,7 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from fraudops import fairness
+from fraudops import drift, fairness
 from fraudops.metrics import bootstrap_interval, format_interval, rates, threshold_at_fpr
 
 BAF_PATH = Path("data/baf/Base.csv")
@@ -174,6 +174,12 @@ def run(data: pd.DataFrame) -> tuple[dict, LGBMClassifier]:
         for part, score in zip((validation, test), scores["lightgbm"], strict=True)
     ]
     report["fairness"] = fairness.fairness_report(*frames)
+
+    # Monthly drift against the training months, with the score of the model trained on them.
+    scored = data.assign(score=models["lightgbm"].predict_proba(inputs(data))[:, 1])
+    months = {f"mois {month}": part for month, part in scored.groupby("month")}
+    columns = [*inputs(data).columns, "score"]
+    report["monthly_psi"] = drift.psi_table(split(scored)[0], months, columns).to_dict()
     return report, models["lightgbm"]
 
 
@@ -184,6 +190,8 @@ def main() -> None:
     (REPORT_DIR / "metrics.json").write_text(json.dumps(report, indent=2) + "\n")
     fairness.plot_fpr_by_age(report["fairness"], REPORT_DIR / "figures" / "fpr_by_age.png")
     fairness.plot_tradeoff(report["fairness"], REPORT_DIR / "figures" / "tradeoff.png")
+    psi = pd.DataFrame(report["monthly_psi"])
+    drift.plot_psi(psi, REPORT_DIR / "figures" / "psi_monthly.png")
     loss = format_interval(*report["fairness"]["mitigation_recall_loss"], percent=True)
     results = (
         "# Résultats sur BAF\n\n"
@@ -193,6 +201,8 @@ def main() -> None:
         + "\n## Équité entre groupes d'âge\n\n"
         + fairness.results_table(report["fairness"])
         + f"\nRappel perdu avec un seuil par groupe : {loss}.\n"
+        + "\n## Dérive mois par mois, contre les mois d'entraînement\n\n"
+        + drift.summary_table(psi, "score")
     )
     (REPORT_DIR / "RESULTS.md").write_text(results)
     print(results)

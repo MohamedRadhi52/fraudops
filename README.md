@@ -106,6 +106,22 @@ Refuser à tort une demande légitime pénalise un client. La métrique d'équit
 
 ![Demandes légitimes signalées par tranche d'âge](reports/baf/figures/fpr_by_age.png)
 
+## Dérive
+
+Le PSI (population stability index) compare la distribution d'une variable à celle d'une période de référence. Règles d'alerte retenues :
+
+| PSI | Lecture | Action |
+|---|---|---|
+| moins de 0,1 | stable | aucune |
+| de 0,1 à 0,25 | dérive modérée | surveiller le taux d'alertes et la calibration, recalibrer si elle se dégrade |
+| plus de 0,25 | dérive forte | ré-entraîner le modèle et recalculer le seuil |
+
+- **Jeu carte, semaine par semaine** (`make drift`). Aucune variable ni le score ne dépassent 0,01 contre les semaines de validation : le simulateur est stationnaire une fois la montée en charge passée, ce qui est une limite du jeu simulé.
+- **Le score se surveille sur un modèle figé.** Comparer les scores des modèles ré-entraînés chaque semaine donnerait des PSI jusqu'à 0,7 sans aucune dérive des données : changer de modèle suffit à déplacer l'échelle des scores.
+- **BAF, mois par mois**, contre les mois d'entraînement, calculé par le workflow. C'est là que la dérive apparaît, comme le prévoit la conception du jeu : elle explique pourquoi le seuil fixé en validation laisse passer plus de 5 % de faux positifs sur le test.
+
+![PSI mensuel des variables de BAF les plus instables](reports/baf/figures/psi_monthly.png)
+
 ## Installation
 
 Prérequis : Python 3.14, et Java 21 pour PySpark (sous Ubuntu : `sudo apt install openjdk-21-jre-headless`).
@@ -123,6 +139,7 @@ make cost         # choisit le seuil par le coût, écrit reports/
 make calibration  # calibre les probabilités, écrit reports/
 make report       # evaluate, cost et calibration à la suite
 make explain      # entraîne le modèle de production et calcule les valeurs SHAP
+make drift        # PSI hebdomadaire des variables et du score
 make baf          # BAF, si data/baf/Base.csv a été téléchargé depuis Kaggle
 ```
 

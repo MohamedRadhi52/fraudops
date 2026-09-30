@@ -108,3 +108,23 @@ def rates(labels: np.ndarray, scores: np.ndarray, threshold: float) -> dict[str,
     """Recall and false positive rate of the cases scoring above `threshold`."""
     flagged = scores > threshold
     return {"recall": flagged[labels == 1].mean(), "fpr": flagged[labels == 0].mean()}
+
+
+def psi(reference: pd.Series, current: pd.Series, bins: int = 10) -> float:
+    """Population stability index of `current` against `reference`.
+
+    Categories and variables with few values are compared value by value, the others on the
+    deciles of the reference.
+    """
+    if isinstance(reference.dtype, pd.CategoricalDtype) or reference.nunique() <= bins:
+        expected = reference.value_counts(normalize=True)
+        actual = current.value_counts(normalize=True).reindex(expected.index, fill_value=0)
+    else:
+        edges = np.unique(np.quantile(reference, np.linspace(0, 1, bins + 1))[1:-1])
+        size = len(edges) + 1
+        expected = np.bincount(np.searchsorted(edges, reference, side="right"), minlength=size)
+        actual = np.bincount(np.searchsorted(edges, current, side="right"), minlength=size)
+        expected, actual = expected / len(reference), actual / len(current)
+    # A floor on the shares avoids an infinite index when a bin is empty.
+    expected, actual = np.maximum(expected, 1e-4), np.maximum(actual, 1e-4)
+    return float(np.sum((actual - expected) * np.log(actual / expected)))

@@ -75,3 +75,9 @@ Les choix structurants du projet, avec leur raison.
 - **TreeSHAP intégré à LightGBM plutôt que la bibliothèque shap.** C'est le même algorithme, avec des valeurs exactes, et l'API n'a pas besoin d'une dépendance de plus.
 - **Importance mesurée sur deux populations** : toutes les transactions, et celles que le modèle signale. La moyenne sur toutes les transactions sous-estime les variables décisives sur peu de cas, comme le risque du terminal.
 - **Modèle de production versionné** (`models/lightgbm.txt`, 200 Ko) : l'API et l'image Docker l'utilisent tel quel.
+
+## Dérive
+
+- **Variables discrètes comparées valeur par valeur**, les continues sur les déciles de la référence : un découpage en déciles masquerait la dérive d'une variable binaire.
+- **Score surveillé sur un modèle figé.** Chaque modèle ré-entraîné a sa propre échelle de scores ; comparer les scores de modèles différents donnerait des PSI jusqu'à 0,7 sans aucune dérive des données.
+- **Seuils d'alerte usuels, 0,1 et 0,25**, chacun associé à une action.
