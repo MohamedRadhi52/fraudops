@@ -87,3 +87,9 @@ Les choix structurants du projet, avec leur raison.
 - **Features reçues déjà calculées.** En production, un feature store tient les fenêtres glissantes à jour ; l'API se contente de scorer, ce qui la garde simple et rapide.
 - **Image minimale** : FastAPI, LightGBM et numpy, le modèle texte versionné, un utilisateur sans privilèges. Le coût d'un contrôle est recopié dans l'API, et un test vérifie qu'il reste égal à celui de l'étude.
 - **Décision par perte attendue**, la règle retenue à l'étape de calibration : contrôler quand probabilité × montant dépasse 10 €.
+
+## Rapport
+
+- **Page statique générée depuis les résultats publiés**, avec la seule bibliothèque standard : aucun chiffre n'est recopié à la main, et un test vérifie que la page se remplit entièrement.
+- **Workflow Pages relancé après chaque exécution de BAF**, pour que le rapport suive les résultats publiés par le workflow.
+- **README en deux temps** : l'essentiel en tête, le détail dans des blocs repliables.
