@@ -1,9 +1,11 @@
-# Data
+# Data and models
 duckdb==1.5.6
+matplotlib==3.11.2
 numpy==2.4.6
 pandas==2.3.3
 pyarrow==25.0.1
 pyspark==4.2.0
+scikit-learn==1.9.1
 
 # Development
 pre-commit==4.6.2

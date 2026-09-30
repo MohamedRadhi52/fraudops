@@ -29,3 +29,10 @@ Les choix structurants du projet, avec leur raison.
 
 - **Python 3.14, pandas 2.3 et numpy 2.4.** PySpark 4.2 ne supporte pas encore pandas 3, et numpy 2.5 provoque des avertissements de dépréciation dans pandas 2.3.
 - **Java 21**, pris en charge par Spark 4 et disponible sur Ubuntu comme dans la CI.
+
+## Validation et baselines
+
+- **Ré-entraînement chaque semaine sur 28 jours.** La fenêtre contient environ 2 400 fraudes et suit l'évolution des terminaux compromis.
+- **Cartes connues bloquées pendant les semaines de test**, comme dans le Handbook. Le modèle est jugé sur les fraudes que la banque ne connaît pas encore, ce qui divise par deux le nombre de fraudes à trouver.
+- **Semaines de validation distinctes des semaines de test.** Règles, hyperparamètres, seuil et calibration sont choisis sur les 4 semaines de validation ; les 8 semaines de test ne servent qu'aux résultats.
+- **Bootstrap de l'AUC-PR par pondération des jours.** Les transactions sont triées une seule fois, puis chaque tirage pondère les jours par leur nombre de tirages. Le résultat est identique à scikit-learn, une vingtaine de fois plus vite.

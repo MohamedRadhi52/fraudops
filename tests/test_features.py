@@ -4,11 +4,6 @@ import pytest
 from fraudops.features import DELAY, WINDOWS, build_features
 
 
-@pytest.fixture(scope="module")
-def features(small_transactions):
-    return build_features(small_transactions)
-
-
 def naive_features(tx, row):
     """Features of one transaction, recomputed from their definition."""
     t = row.tx_datetime
@@ -26,30 +21,30 @@ def naive_features(tx, row):
     return expected
 
 
-def test_features_match_their_definition(small_transactions, features):
-    for row in features.sample(200, random_state=0).itertuples():
+def test_features_match_their_definition(small_transactions, small_features):
+    for row in small_features.sample(200, random_state=0).itertuples():
         for name, value in naive_features(small_transactions, row).items():
             assert getattr(row, name) == pytest.approx(value), name
 
 
-def test_features_ignore_future_transactions(small_transactions, features):
+def test_features_ignore_future_transactions(small_transactions, small_features):
     cutoff = small_transactions["tx_datetime"].quantile(0.5)
     past = small_transactions[small_transactions["tx_datetime"] <= cutoff]
-    pd.testing.assert_frame_equal(build_features(past), features.loc[past.index])
+    pd.testing.assert_frame_equal(build_features(past), small_features.loc[past.index])
 
 
-def test_features_ignore_labels_not_known_yet(small_transactions, features):
+def test_features_ignore_labels_not_known_yet(small_transactions, small_features):
     tx = small_transactions.copy()
     cutoff = tx["tx_datetime"].quantile(0.5)
     unknown = tx["tx_datetime"] > cutoff - pd.Timedelta(days=DELAY)
     tx.loc[unknown, "tx_fraud"] = 1 - tx.loc[unknown, "tx_fraud"]
     flipped = build_features(tx)
 
-    columns = features.columns.difference(tx.columns)
+    columns = small_features.columns.difference(tx.columns)
     scored = tx["tx_datetime"] <= cutoff
-    pd.testing.assert_frame_equal(flipped.loc[scored, columns], features.loc[scored, columns])
+    pd.testing.assert_frame_equal(flipped.loc[scored, columns], small_features.loc[scored, columns])
     # The flipped labels do change the features of later transactions: the test can fail.
-    assert not flipped.loc[~scored, columns].equals(features.loc[~scored, columns])
+    assert not flipped.loc[~scored, columns].equals(small_features.loc[~scored, columns])
 
 
 def test_transactions_of_the_same_second_see_each_other():

@@ -1,12 +1,30 @@
 # FraudOps
 
-Détection de fraude bancaire sur deux jeux complémentaires, évaluée comme en production : validation temporelle, coût métier sous contrainte de capacité, calibration et équité.
+[![CI](https://github.com/MohamedRadhi52/fraudops/actions/workflows/ci.yml/badge.svg)](https://github.com/MohamedRadhi52/fraudops/actions/workflows/ci.yml)
 
-Projet en cours de construction.
+Détection de fraude carte bancaire, évaluée comme en production : le modèle est ré-entraîné chaque semaine, une fraude n'est connue que 7 jours après la transaction, et l'équipe d'enquête ne peut contrôler que 100 cartes par jour.
+
+![Cartes frauduleuses parmi les 100 contrôlées chaque jour, par modèle](reports/figures/card_precision.png)
+
+| Modèle | Card Precision@100 | AUC-PR |
+|---|---|---|
+| Règles métier | 0,15 [0,14 ; 0,16] | 0,37 [0,35 ; 0,39] |
+| Régression logistique | 0,19 [0,18 ; 0,20] | 0,61 [0,58 ; 0,63] |
+| Plafond (modèle parfait) | 0,28 | 1 |
+
+La Card Precision@100 est la part de vraies fraudes parmi les 100 cartes contrôlées chaque jour. Résultats sur 8 semaines de test, avec des intervalles de confiance à 95 % obtenus par bootstrap sur les 56 jours.
+
+Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, pytest, GitHub Actions.
+
+## Méthode
+
+- **Validation préquentielle.** Chaque semaine, le modèle est ré-entraîné sur les 28 derniers jours dont les étiquettes sont connues, puis score la semaine suivante. Les 4 premières semaines servent aux réglages, les 8 suivantes aux résultats.
+- **Cartes bloquées.** Une carte dont une fraude est connue est bloquée et ses transactions ne sont plus scorées. Cela retire la moitié des fraudes des semaines de test, celles que la banque connaît déjà sans modèle, et ramène le plafond de la Card Precision@100 à 0,28.
+- **Règles métier.** Trois règles tirées de l'exploration : montant supérieur à 220 €, fraude récente déjà connue sur le terminal, montant trois fois supérieur à l'habitude du client. À égalité de règles, les plus gros montants passent en premier.
 
 ## Installation
 
-Prérequis : Python 3.14, et Java 21 pour PySpark.
+Prérequis : Python 3.14, et Java 21 pour PySpark (sous Ubuntu : `sudo apt install openjdk-21-jre-headless`).
 
 ```bash
 make install    # crée .venv, installe les dépendances et les hooks pre-commit
@@ -15,6 +33,7 @@ make data       # génère data/transactions.parquet
 make explore    # lance les requêtes DuckDB de sql/
 make features   # calcule les features avec pandas
 make benchmark  # compare pandas et Spark sur le jeu complet
+make evaluate   # entraîne et évalue les modèles, écrit reports/
 ```
 
 ## Données
@@ -47,7 +66,7 @@ Sept requêtes DuckDB, dans [`sql/`](sql), lancées par `make explore`. Voici le
 2. **Aucune transaction légitime ne dépasse 220 €.** Une règle sur le montant attrape donc 3 609 fraudes, soit 23,5 %, sans aucune fausse alerte. En revanche, les fraudes des terminaux compromis ont des montants ordinaires (médiane de 46,73 € contre 46,43 € pour les transactions légitimes) : le montant seul ne suffit pas.
 3. **Un terminal déjà touché reste risqué.** Quand une fraude y a déjà été confirmée, sur une transaction vieille de 7 à 37 jours (délai d'étiquetage oblige), le taux de fraude atteint 4,48 % contre 0,49 % ailleurs, et ces transactions concentrent 47,5 % des fraudes. D'où les features de risque par terminal, décalées de 7 jours.
 4. **Un client compromis dépense plus que d'habitude.** Une fraude du scénario 3 vaut en médiane 3,7 fois la dépense moyenne du client sur les 30 jours précédents, contre 0,98 fois pour une transaction légitime. D'où le nombre de transactions et le montant moyen de chaque client sur 1, 7 et 30 jours.
-5. **La Card Precision@100 ne peut pas atteindre 1.** Cette métrique est la part de vraies fraudes parmi les 100 cartes contrôlées chaque jour. Après le premier mois, on compte en moyenne 78 cartes frauduleuses par jour (entre 55 et 101) sur environ 3 800 cartes actives : un modèle parfait plafonnerait autour de 0,78. Les résultats se lisent par rapport à ce plafond.
+5. **La Card Precision@100 ne peut pas atteindre 1.** Après le premier mois, on compte en moyenne 78 cartes frauduleuses par jour (entre 55 et 101) sur environ 3 800 cartes actives, et beaucoup ont déjà une fraude connue. Les résultats se lisent donc par rapport au plafond d'un modèle parfait, calculé dans les conditions de l'évaluation.
 
 Enfin, le taux de fraude est le même la nuit et le jour, en semaine et le week-end (entre 0,84 % et 0,89 %) : contrairement au livre, le projet n'utilise pas de feature d'heure ni de jour.
 
