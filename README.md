@@ -74,6 +74,14 @@ Avec LightGBM, l'équipe trouve en moyenne 19,5 cartes frauduleuses parmi les 10
 | 2. Terminal compromis, aucune fraude encore connue | 8 % |
 | 3. Client compromis | 98 % |
 
+## Ouverture de compte (BAF)
+
+Le second jeu, Bank Account Fraud (Feedzai, NeurIPS 2022), contient 1 million de demandes d'ouverture de compte sur 8 mois, dont environ 1 % de fraudes, avec des attributs sensibles comme l'âge. Sa licence interdit l'usage commercial : le workflow [`baf.yml`](.github/workflows/baf.yml) le télécharge avec un jeton Kaggle gardé en secret, entraîne et évalue les modèles, puis publie seulement les métriques et les figures dans [`reports/baf/`](reports/baf/RESULTS.md). Les données ne sont jamais dans le dépôt.
+
+- **Protocole.** Entraînement sur les mois 0 à 4, arrêt précoce et choix du seuil sur le mois 5, test sur les mois 6 et 7. Le seuil signale 5 % des demandes légitimes du mois de validation, puis reste fixe : le taux de faux positifs obtenu sur le test mesure l'effet de la dérive dans le temps.
+- **Comparaison avec le papier.** Le papier fixe le seuil sur le test lui-même. Cette mesure est donnée aussi, pour comparer.
+- **Intervalles de confiance.** Bootstrap sur les demandes, apparié entre modèles pour le gain de LightGBM.
+
 ## Installation
 
 Prérequis : Python 3.14, et Java 21 pour PySpark (sous Ubuntu : `sudo apt install openjdk-21-jre-headless`).
@@ -90,6 +98,7 @@ make mlflow       # ouvre l'interface MLflow sur http://127.0.0.1:5000
 make cost         # choisit le seuil par le coût, écrit reports/
 make calibration  # calibre les probabilités, écrit reports/
 make report       # evaluate, cost et calibration à la suite
+make baf          # BAF, si data/baf/Base.csv a été téléchargé depuis Kaggle
 ```
 
 ## Données

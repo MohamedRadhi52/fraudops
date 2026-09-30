@@ -55,3 +55,10 @@ Les choix structurants du projet, avec leur raison.
 - **Calibration isotonique ajustée sur les semaines de validation.** Elle ne suppose aucune forme de courbe, et la validation compte assez de fraudes (environ 1 200) pour l'estimer.
 - **Règle de perte attendue plutôt qu'un seuil sur la probabilité.** Contrôler une carte dès que probabilité × montant dépasse 10 € : le seuil découle des coûts au lieu d'être cherché, et le montant en jeu compte.
 - **Contre-exemple avec pondération des classes.** Le même LightGBM entraîné avec des poids équilibrés montre, chiffres à l'appui, pourquoi calibrer avant de décider.
+
+## BAF
+
+- **Données BAF jamais dans le dépôt.** Leur licence interdit l'usage commercial : GitHub Actions les télécharge avec le jeton Kaggle gardé en secret, publie les métriques et les figures par un commit automatique, et garde le modèle 90 jours comme artefact du workflow.
+- **Seuil fixé sur le mois de validation, puis gardé sur le test.** C'est plus strict que le papier, qui fixe le seuil sur le test lui-même ; les deux mesures sont publiées.
+- **Bootstrap sur les demandes**, indépendantes entre elles, et apparié entre modèles.
+- **Colonnes catégorielles typées** plutôt qu'encodées en entiers : LightGBM les traite nativement et la régression logistique les encode en one-hot.

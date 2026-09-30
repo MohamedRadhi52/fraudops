@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 CAPACITY = 100  # cards the team can investigate each day
+TARGET_FPR = 0.05  # share of legitimate BAF applications that may be flagged
 N_RESAMPLES = 1000
 
 
@@ -62,12 +63,19 @@ def auc_pr_of_days(scored: pd.DataFrame, score: str) -> Callable[[np.ndarray], f
 
 
 def bootstrap_interval(
-    statistic: Callable[[np.ndarray], float], days: np.ndarray, seed: int = 0
+    statistic: Callable[[np.ndarray], float], units: np.ndarray, seed: int = 0
 ) -> list[float]:
-    """95% interval of the statistic over resamplings of the days, drawn with replacement."""
+    """95% interval of the statistic over resamplings of the units (days, applications)."""
     rng = np.random.default_rng(seed)
-    samples = [statistic(rng.choice(days, len(days))) for _ in range(N_RESAMPLES)]
+    samples = [statistic(rng.choice(units, len(units))) for _ in range(N_RESAMPLES)]
     return np.percentile(samples, [2.5, 97.5]).tolist()
+
+
+def format_interval(value: float, low: float, high: float, percent: bool = False) -> str:
+    """Value and 95% interval in French notation: 0,66 [0,65 ; 0,68] or 19,5 % [18,5 ; 20,4]."""
+    if percent:
+        return f"{100 * value:.1f} % [{100 * low:.1f} ; {100 * high:.1f}]".replace(".", ",")
+    return f"{value:.2f} [{low:.2f} ; {high:.2f}]".replace(".", ",")
 
 
 def summarize(scored: pd.DataFrame, score: str) -> dict[str, list[float]]:
@@ -89,3 +97,14 @@ def paired_difference(scored: pd.DataFrame, score: str, baseline: str) -> list[f
     difference = card_precision(scored, score) - card_precision(scored, baseline)
     days = difference.index.to_numpy()
     return [difference.mean(), *bootstrap_interval(lambda d: difference[d].mean(), days)]
+
+
+def threshold_at_fpr(labels: np.ndarray, scores: np.ndarray, fpr: float = TARGET_FPR) -> float:
+    """Score above which a share `fpr` of the legitimate cases is flagged."""
+    return float(np.quantile(scores[labels == 0], 1 - fpr))
+
+
+def rates(labels: np.ndarray, scores: np.ndarray, threshold: float) -> dict[str, float]:
+    """Recall and false positive rate of the cases scoring above `threshold`."""
+    flagged = scores > threshold
+    return {"recall": flagged[labels == 1].mean(), "fpr": flagged[labels == 0].mean()}

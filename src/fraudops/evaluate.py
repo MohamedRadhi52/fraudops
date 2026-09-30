@@ -73,13 +73,6 @@ def share_stopped(test: pd.DataFrame, score: str) -> dict[str, float]:
     return stopped.groupby(group).mean().to_dict()
 
 
-def format_interval(value: float, low: float, high: float, percent: bool = False) -> str:
-    """Value and 95% interval in French notation: 0,66 [0,65 ; 0,68] or 19,5 % [18,5 ; 20,4]."""
-    if percent:
-        return f"{100 * value:.1f} % [{100 * low:.1f} ; {100 * high:.1f}]".replace(".", ",")
-    return f"{value:.2f} [{low:.2f} ; {high:.2f}]".replace(".", ",")
-
-
 def plot_card_precision(results: dict, ceiling: float, path: Path) -> None:
     """Fraudulent cards found among the 100 investigated each day, for each model."""
     labels = [LABELS[name] for name in results]
@@ -111,12 +104,14 @@ def plot_card_precision(results: dict, ceiling: float, path: Path) -> None:
 def print_summary(report: dict) -> None:
     print("| Modèle | Card Precision@100 | AUC-PR |\n|---|---|---|")
     for name, result in report["models"].items():
-        card_precision = format_interval(*result["card_precision"], percent=True)
-        print(f"| {LABELS[name]} | {card_precision} | {format_interval(*result['auc_pr'])} |")
+        card_precision = metrics.format_interval(*result["card_precision"], percent=True)
+        print(
+            f"| {LABELS[name]} | {card_precision} | {metrics.format_interval(*result['auc_pr'])} |"
+        )
     ceiling = 100 * report["card_precision_ceiling"]
     print(f"| Plafond (modèle parfait) | {ceiling:.1f} % | 1 |".replace(".", ","))
     for name, gain in report["lightgbm_card_precision_gain"].items():
-        print(f"LightGBM moins {LABELS[name]} : {format_interval(*gain, percent=True)}")
+        print(f"LightGBM moins {LABELS[name]} : {metrics.format_interval(*gain, percent=True)}")
     for group, share in report["lightgbm_share_of_frauds_stopped"].items():
         print(f"Fraudes stoppées avec LightGBM, {group} : {share:.0%}")
 
