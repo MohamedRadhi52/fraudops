@@ -1,0 +1,15 @@
+{
+  "tx_amount": 913.6,
+  "customer_nb_tx_1d": 4,
+  "customer_avg_amount_1d": 535.24,
+  "customer_nb_tx_7d": 11,
+  "customer_avg_amount_7d": 387.17,
+  "customer_nb_tx_30d": 28,
+  "customer_avg_amount_30d": 216.22,
+  "terminal_nb_tx_1d": 1,
+  "terminal_risk_1d": 0.0,
+  "terminal_nb_tx_7d": 12,
+  "terminal_risk_7d": 0.0,
+  "terminal_nb_tx_30d": 40,
+  "terminal_risk_30d": 0.0
+}

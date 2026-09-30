@@ -10,7 +10,12 @@ pyarrow==25.0.1
 pyspark==4.2.0
 scikit-learn==1.9.1
 
+# API
+fastapi==0.141.1
+uvicorn==0.54.0
+
 # Development
+httpx2==2.13.1
 pre-commit==4.6.2
 pytest==9.1.1
 ruff==0.16.9

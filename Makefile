@@ -2,7 +2,7 @@ PYTHON ?= python3.14
 VENV := .venv
 BIN := $(VENV)/bin
 
-.PHONY: install lint format test data explore features benchmark evaluate mlflow cost calibration report explain drift baf clean
+.PHONY: install lint format test data explore features benchmark evaluate mlflow cost calibration report explain drift api docker baf clean
 
 install: $(BIN)/python
 	$(BIN)/pip install -r requirements.txt -e .
@@ -53,6 +53,13 @@ explain:
 
 drift:
 	$(BIN)/python -m fraudops.drift
+
+api:
+	$(BIN)/uvicorn fraudops.api:app --reload
+
+docker:
+	docker build -t fraudops-api .
+	docker run --rm -p 8000:8000 fraudops-api
 
 baf:
 	$(BIN)/python -m fraudops.baf

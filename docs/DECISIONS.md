@@ -81,3 +81,9 @@ Les choix structurants du projet, avec leur raison.
 - **Variables discrètes comparées valeur par valeur**, les continues sur les déciles de la référence : un découpage en déciles masquerait la dérive d'une variable binaire.
 - **Score surveillé sur un modèle figé.** Chaque modèle ré-entraîné a sa propre échelle de scores ; comparer les scores de modèles différents donnerait des PSI jusqu'à 0,7 sans aucune dérive des données.
 - **Seuils d'alerte usuels, 0,1 et 0,25**, chacun associé à une action.
+
+## API
+
+- **Features reçues déjà calculées.** En production, un feature store tient les fenêtres glissantes à jour ; l'API se contente de scorer, ce qui la garde simple et rapide.
+- **Image minimale** : FastAPI, LightGBM et numpy, le modèle texte versionné, un utilisateur sans privilèges. Le coût d'un contrôle est recopié dans l'API, et un test vérifie qu'il reste égal à celui de l'étude.
+- **Décision par perte attendue**, la règle retenue à l'étape de calibration : contrôler quand probabilité × montant dépasse 10 €.

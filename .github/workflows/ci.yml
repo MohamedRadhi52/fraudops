@@ -20,3 +20,15 @@ jobs:
       - run: make install PYTHON=python
       - run: make lint
       - run: make test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t fraudops-api .
+      - name: Score a transaction with the container
+        run: |
+          docker run -d -p 8000:8000 fraudops-api
+          for attempt in $(seq 30); do curl -sf localhost:8000/health && break; sleep 1; done
+          curl -sf -X POST localhost:8000/score -H "Content-Type: application/json" \
+            -d @tests/transaction.json

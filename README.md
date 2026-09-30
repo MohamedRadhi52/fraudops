@@ -22,7 +22,7 @@ Résultats sur 8 semaines de test, avec des intervalles de confiance à 95 % obt
 - **Des probabilités fiables.** Contrôler une carte dès que probabilité × montant dépasse 10 € coûte 52 k€, sans aucun seuil à régler. Entraîné avec pondération des classes, le même modèle gonflerait ses probabilités et coûterait 91 k€.
 - **LightGBM face à la régression logistique.** Il ne gagne que 0,4 point de Card Precision@100 [0,2 ; 0,7], mais 12 k€ de coût : son avantage se joue sur les cartes les plus suspectes, là où se place le seuil (97,7 % de fraudes parmi les 10 premières chaque jour, contre 93,9 %).
 
-Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, LightGBM, MLflow, Fairlearn, pytest, GitHub Actions.
+Données : 1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022). Outils : pandas, DuckDB, PySpark, scikit-learn, LightGBM, MLflow, Fairlearn, FastAPI, Docker, pytest, GitHub Actions.
 
 ## Méthode
 
@@ -86,6 +86,29 @@ Valeurs SHAP du modèle de production (`make explain`) : LightGBM entraîné sur
 
 **Limites.** SHAP explique le modèle, pas la fraude. Des variables corrélées se partagent le crédit de façon arbitraire : les taux de fraude du terminal sur 1, 7 et 30 jours portent en partie la même information. Et une variable peut en remplacer une autre, comme l'âge sur BAF : une explication qui ne cite pas une variable sensible ne prouve pas que le modèle l'ignore.
 
+## API
+
+L'API reçoit les features d'une transaction, calculées en amont, et renvoie la probabilité de fraude, la perte attendue, la décision et les trois raisons principales du score. `make api` la lance en local, `make docker` dans son conteneur ; l'image est construite et testée dans la CI, et la documentation interactive est sur `/docs`.
+
+```bash
+curl -X POST localhost:8000/score -H "Content-Type: application/json" -d @tests/transaction.json
+```
+
+```json
+{
+  "probability": 0.932,
+  "expected_loss": 851.49,
+  "decision": "contrôler",
+  "reasons": [
+    {"feature": "tx_amount", "label": "montant de la transaction", "contribution": 6.71},
+    {"feature": "customer_avg_amount_7d", "label": "montant moyen du client sur 7 jours", "contribution": 2.08},
+    {"feature": "customer_avg_amount_1d", "label": "montant moyen du client sur 1 jour", "contribution": 0.54}
+  ]
+}
+```
+
+La carte est contrôlée quand la perte attendue, probabilité × montant, dépasse le coût d'un contrôle (10 €). Les contributions sont des valeurs SHAP en log-odds.
+
 ## Ouverture de compte (BAF)
 
 Le second jeu, Bank Account Fraud (Feedzai, NeurIPS 2022), contient 1 million de demandes d'ouverture de compte sur 8 mois, dont environ 1 % de fraudes, avec des attributs sensibles comme l'âge. Sa licence interdit l'usage commercial : le workflow [`baf.yml`](.github/workflows/baf.yml) le télécharge avec un jeton Kaggle gardé en secret, entraîne et évalue les modèles, puis publie seulement les métriques et les figures dans [`reports/baf/`](reports/baf/RESULTS.md). Les données ne sont jamais dans le dépôt.
@@ -140,6 +163,8 @@ make calibration  # calibre les probabilités, écrit reports/
 make report       # evaluate, cost et calibration à la suite
 make explain      # entraîne le modèle de production et calcule les valeurs SHAP
 make drift        # PSI hebdomadaire des variables et du score
+make api          # lance l'API sur http://127.0.0.1:8000
+make docker       # construit et lance l'image Docker de l'API
 make baf          # BAF, si data/baf/Base.csv a été téléchargé depuis Kaggle
 ```
 
