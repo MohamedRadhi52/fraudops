@@ -111,7 +111,7 @@ def evaluate(validation: pd.DataFrame, test: pd.DataFrame, scores: dict) -> dict
         threshold = threshold_at_fpr(validation[LABEL].to_numpy(), validation_scores)
         models[name] = summarize_model(labels, test_scores, threshold)
         flagged[name] = test_scores > threshold
-    # Paired bootstrap: both models are compared on the same resampled frauds.
+    # paired bootstrap, both models see the same resampled frauds
     gain = flagged["lightgbm"][labels == 1].astype(float) - flagged["logistic"][labels == 1]
     rows = np.arange(len(gain))
     return {
@@ -167,7 +167,7 @@ def run(data: pd.DataFrame) -> tuple[dict, LGBMClassifier]:
         },
     } | evaluate(validation, test, scores)
 
-    # The same model without age shows whether correlated variables keep the gap.
+    # same model without age, to see if other variables keep the gap
     without_age = lightgbm(train, validation, drop=WITHOUT_AGE)
     frames = [
         fairness_frame(part, score, without_age)
@@ -175,7 +175,7 @@ def run(data: pd.DataFrame) -> tuple[dict, LGBMClassifier]:
     ]
     report["fairness"] = fairness.fairness_report(*frames)
 
-    # Monthly drift against the training months, with the score of the model trained on them.
+    # monthly drift against the training months
     scored = data.assign(score=models["lightgbm"].predict_proba(inputs(data))[:, 1])
     months = {f"mois {month}": part for month, part in scored.groupby("month")}
     columns = [*inputs(data).columns, "score"]

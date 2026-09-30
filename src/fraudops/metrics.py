@@ -50,7 +50,7 @@ def auc_pr_of_days(scored: pd.DataFrame, score: str) -> Callable[[np.ndarray], f
     scored = scored.sort_values(score, ascending=False)
     labels = scored["tx_fraud"].to_numpy()
     day_codes, days = pd.factorize(scored["tx_time_days"])
-    # Last row of each run of equal scores: the precision-recall curve moves there.
+    # last row of each run of equal scores, where the precision-recall curve moves
     steps = np.flatnonzero(np.append(np.diff(scored[score].to_numpy()) != 0, True))
 
     def auc_pr(sample: np.ndarray) -> float:
@@ -125,6 +125,6 @@ def psi(reference: pd.Series, current: pd.Series, bins: int = 10) -> float:
         expected = np.bincount(np.searchsorted(edges, reference, side="right"), minlength=size)
         actual = np.bincount(np.searchsorted(edges, current, side="right"), minlength=size)
         expected, actual = expected / len(reference), actual / len(current)
-    # A floor on the shares avoids an infinite index when a bin is empty.
+    # floor to avoid log(0) when a bin is empty
     expected, actual = np.maximum(expected, 1e-4), np.maximum(actual, 1e-4)
     return float(np.sum((actual - expected) * np.log(actual / expected)))

@@ -127,7 +127,7 @@ def main() -> None:
 
     test = scores[scores["period"] == "test"]
     results = {name: metrics.summarize(test, name) for name in fit_predicts}
-    # A perfect model scores 1 on frauds: its Card Precision is the best achievable.
+    # ceiling given by a perfect model, which scores 1 on every fraud
     ceiling = metrics.card_precision(test.assign(perfect=test["tx_fraud"]), "perfect").mean()
     gains = {name: metrics.paired_difference(test, "lightgbm", name) for name in BASELINES}
     for name, result in results.items():

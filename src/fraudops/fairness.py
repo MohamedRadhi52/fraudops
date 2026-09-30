@@ -90,7 +90,7 @@ def fairness_report(validation: pd.DataFrame, test: pd.DataFrame) -> dict:
     report = {
         name: summarize_variant(labels, flags, groups, ages) for name, flags in flagged.items()
     }
-    # Paired bootstrap: recall lost by the mitigation, on the same resampled frauds.
+    # recall lost with one threshold per group, paired bootstrap on the frauds
     frauds = labels == 1
     loss = flagged["single_threshold"][frauds].astype(float) - flagged["group_thresholds"][frauds]
     rows = np.arange(len(loss))

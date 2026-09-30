@@ -27,7 +27,7 @@ def daily_cost(scored: pd.DataFrame, score: str, threshold: float) -> pd.DataFra
             "missed": missed.groupby("tx_time_days")["tx_amount"].sum(),
         }
     )
-    # Days without any control or any missed fraud count for zero, not for a missing value.
+    # a day without controls or missed frauds costs 0, not NaN
     daily = daily.reindex(np.sort(scored["tx_time_days"].unique())).fillna(0)
     daily["cost"] = CONTROL_COST * daily["controls"] + daily["missed"]
     return daily

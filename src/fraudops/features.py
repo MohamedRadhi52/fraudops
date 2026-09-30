@@ -30,8 +30,8 @@ def customer_features(tx: pd.DataFrame) -> pd.DataFrame:
         columns[f"customer_nb_tx_{days}d"] = window.count()["tx_amount"].astype(np.int64)
         columns[f"customer_avg_amount_{days}d"] = window.mean()["tx_amount"]
     features = pd.DataFrame(columns).droplevel(0)
-    # pandas ends a window at the current row: extend it to the customer's other
-    # transactions of the same second, like any time-based window.
+    # pandas stops the window at the current row, so add the other transactions of
+    # the same second (like a Spark range window)
     return features.groupby([tx["customer_id"], tx["tx_datetime"]]).transform("last")
 
 

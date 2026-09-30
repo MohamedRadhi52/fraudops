@@ -6,7 +6,7 @@ from fraudops.features import DELAY
 
 TRAIN_DAYS = 28
 TEST_DAYS = 7
-# First day of each test week. Validation weeks tune the models, test weeks give the results.
+# first day of each test week (validation weeks for tuning, test weeks for the results)
 VALIDATION_WEEKS = (98, 105, 112, 119)
 TEST_WEEKS = (126, 133, 140, 147, 154, 161, 168, 175)
 

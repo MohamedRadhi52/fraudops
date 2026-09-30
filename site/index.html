@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FraudOps : détection de fraude bancaire évaluée comme en production</title>
+<title>FraudOps : détection de fraude bancaire</title>
 <meta name="description" content="Détection de fraude carte bancaire et ouverture de compte : validation préquentielle, coût métier, calibration, équité, dérive.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -56,65 +56,66 @@
 <body>
 <header>
   <h1>FraudOps</h1>
-  <p class="claim">Sur huit semaines de test, le modèle ramène le coût de la fraude carte de $cost_none_short à $cost_lightgbm_short.</p>
-  <p class="lead">Une détection de fraude évaluée comme en production : modèle ré-entraîné chaque semaine, fraudes connues sept jours après la transaction, et une équipe qui ne peut contrôler que 100 cartes par jour.</p>
+  <p class="claim">Sur 8 semaines de test, le coût de la fraude carte passe de $cost_none_short sans contrôle à $cost_lightgbm_short avec le modèle.</p>
+  <p class="lead">Le modèle est ré-entraîné chaque semaine, une fraude n'est connue que 7 jours après la transaction, et l'équipe ne peut contrôler que 100 cartes par jour.</p>
   <nav><a href="https://github.com/MohamedRadhi52/fraudops">Code sur GitHub</a><a href="https://github.com/MohamedRadhi52/fraudops/blob/main/docs/DECISIONS.md">Journal des décisions</a></nav>
 </header>
 <main>
   <figure class="wide">
     <img src="figures/cost_by_strategy.png" alt="Coût sur 8 semaines : $cost_none_short sans contrôle, $cost_rules_short avec des règles métier, $cost_logistic_short avec une régression logistique, $cost_lightgbm_short avec LightGBM, $cost_perfect_short pour un modèle parfait.">
-    <figcaption>Coût = montant des fraudes non stoppées + 10 € par carte contrôlée. Intervalles de confiance à 95 % par bootstrap sur les 56 jours de test.</figcaption>
+    <figcaption>Coût = montant des fraudes qui passent + 10 € par carte contrôlée. Intervalles de confiance à 95 % par bootstrap sur les 56 jours de test.</figcaption>
   </figure>
 
-  <h2>LightGBM stoppe presque toutes les fraudes repérables</h2>
-  <p>La Card Precision@100 est la part de vraies fraudes parmi les 100 cartes contrôlées chaque jour. Une carte dont une fraude est déjà connue est bloquée : le modèle est jugé seulement sur les fraudes que la banque ne connaît pas encore, d'où un plafond de $ceiling.</p>
+  <h2>Détection</h2>
+  <p>La Card Precision@100 est la part de vraies fraudes parmi les 100 cartes contrôlées chaque jour. Les cartes dont une fraude est déjà connue sont bloquées, donc le modèle n'est jugé que sur les fraudes que la banque ne connaît pas encore. Le plafond est de $ceiling.</p>
   <table>
     <thead><tr><th>Modèle</th><th>Card Precision@100</th><th>AUC-PR</th><th>Coût sur 8 semaines</th></tr></thead>
     <tbody>$models_rows</tbody>
   </table>
-  <p>Ce qui manque vient d'un terminal compromis dont aucune fraude n'est encore connue : LightGBM ne stoppe que $stopped_unknown de ces fraudes, contre $stopped_known quand le terminal a déjà une fraude connue, $stopped_s3 pour les clients compromis et $stopped_s1 au-delà de 220 €. Tant que les premières étiquettes n'arrivent pas, rien dans les données ne trahit ces fraudes.</p>
+  <p>Les fraudes qui passent viennent surtout de terminaux compromis dont aucune fraude n'est encore connue. LightGBM n'en arrête que $stopped_unknown, contre $stopped_known quand le terminal a déjà une fraude connue, $stopped_s3 pour les clients compromis et $stopped_s1 au-delà de 220 €. Pour ces fraudes-là, il n'y a rien dans les données tant que les premières étiquettes ne sont pas arrivées.</p>
   <figure>
     <img src="figures/card_precision.png" alt="Cartes frauduleuses parmi les 100 contrôlées chaque jour, par modèle, avec le plafond du modèle parfait.">
   </figure>
 
-  <h2>Le bon seuil n'utilise qu'un tiers de la capacité</h2>
-  <p>Le seuil qui minimise le coût est choisi sur les semaines de validation, puis gardé sur le test. Pour LightGBM, il contrôle $controls_lightgbm cartes par jour et coûte $cost_lightgbm, contre $cost_full en utilisant chaque jour les 100 contrôles : au-dessous du seuil, une carte a trop peu de chances d'être frauduleuse pour justifier un contrôle à 10 €. La capacité restante absorbe les pics et peut servir à des contrôles aléatoires, seul moyen de mesurer la fraude que le modèle ne voit pas.</p>
+  <h2>Seuil et coût</h2>
+  <p>Le seuil qui minimise le coût est choisi sur les semaines de validation, puis gardé sur le test. Pour LightGBM, il contrôle $controls_lightgbm cartes par jour et coûte $cost_lightgbm, contre $cost_full si on utilise les 100 contrôles tous les jours. En dessous du seuil, une carte a trop peu de chances d'être frauduleuse pour valoir un contrôle à 10 €. La capacité qui reste peut servir pour les pics et pour des contrôles aléatoires, le seul moyen de mesurer la fraude que le modèle ne voit pas.</p>
   <figure class="wide">
     <img src="figures/cost.png" alt="Coût total selon le nombre de cartes contrôlées par jour pour chaque modèle, avec le seuil choisi en validation.">
   </figure>
 
-  <h2>Des probabilités fiables, tant qu'on ne pondère pas les classes</h2>
-  <p>Des probabilités calibrées permettent une règle sans réglage : contrôler une carte dès que probabilité × montant dépasse le coût d'un contrôle. Les semaines de test comptent $fraud_rate de fraudes.</p>
+  <h2>Calibration</h2>
+  <p>Avec des probabilités calibrées, on peut décider sans chercher de seuil : on contrôle une carte dès que probabilité × montant dépasse le coût d'un contrôle. Il y a $fraud_rate de fraudes dans les semaines de test.</p>
   <table>
     <thead><tr><th>Variante</th><th>Probabilité moyenne</th><th>Score de Brier</th><th>Coût avec cette règle</th></tr></thead>
     <tbody>$calibration_rows</tbody>
   </table>
-  <p>Entraîné sans pondération, LightGBM est déjà calibré. Pondérer les classes, une pratique courante, gonfle les probabilités et fait contrôler 100 cartes par jour ; une calibration isotonique ajustée sur la validation les ramène au bon niveau.</p>
+  <p>Entraîné sans pondération, LightGBM est déjà calibré. Avec une pondération des classes, ce qu'on fait souvent, les probabilités sont gonflées et la règle fait contrôler 100 cartes par jour. Une calibration isotonique sur la validation les remet au bon niveau.</p>
   <figure>
     <img src="figures/calibration.png" alt="Courbes de fiabilité de LightGBM, du modèle pondéré et du modèle pondéré calibré.">
   </figure>
 
   <h2>Ce que le modèle regarde</h2>
-  <p>Sur toutes les transactions, LightGBM regarde surtout l'habitude de dépense du client. Sur les $alerts transactions qu'il signale ($alert_fraud_share de fraudes), le montant et le taux de fraude du terminal sur 7 jours dominent. Exemple : $example_amount pour un client qui dépense $example_habit en moyenne sur 30 jours, perte attendue $example_loss ; ses trois raisons, renvoyées par l'API avec chaque score : $example_reasons.</p>
+  <p>Sur l'ensemble des transactions, LightGBM regarde surtout l'habitude de dépense du client. Sur les $alerts transactions qu'il signale ($alert_fraud_share de fraudes), ce sont le montant et le taux de fraude du terminal sur 7 jours qui comptent le plus. Par exemple, pour une transaction de $example_amount d'un client qui dépense $example_habit en moyenne sur 30 jours, la perte attendue est de $example_loss, et l'API renvoie ces trois raisons avec le score : $example_reasons.</p>
   <figure>
     <img src="figures/shap.png" alt="Contribution moyenne de chaque variable au score, sur toutes les transactions et sur les transactions signalées.">
   </figure>
-  <p>SHAP explique le modèle, pas la fraude : des variables corrélées se partagent le crédit, et une variable absente de l'explication peut être remplacée par une autre qui porte la même information.</p>
+  <p>Attention, SHAP explique le modèle et pas la fraude. Des variables corrélées se partagent le crédit, et une variable absente de l'explication peut être remplacée par une autre qui porte la même information.</p>
 
-  <h2>Ouverture de compte : l'âge pèse sur les faux positifs</h2>
-  <p>Le jeu Bank Account Fraud (Feedzai, NeurIPS 2022) compte $baf_applications demandes sur 8 mois. Sa licence interdit l'usage commercial : un workflow GitHub Actions le télécharge, entraîne sur les mois 0 à 4, fixe le seuil à 5 % de faux positifs sur le mois 5 et teste sur les mois 6 et 7. Seuls les résultats sont publiés.</p>
+  <h2>Ouverture de compte (BAF)</h2>
+  <p>Le jeu Bank Account Fraud (Feedzai, NeurIPS 2022) contient $baf_applications demandes sur 8 mois. Il est sous licence non commerciale, donc un workflow GitHub Actions le télécharge, entraîne sur les mois 0 à 4, fixe le seuil à 5 % de faux positifs sur le mois 5 et teste sur les mois 6 et 7. Seuls les résultats sont publiés.</p>
   <table>
     <thead><tr><th>Modèle</th><th>Rappel, seuil fixé en validation</th><th>Faux positifs obtenus</th><th>Rappel à 5 % mesuré sur le test</th></tr></thead>
     <tbody>$baf_rows</tbody>
   </table>
-  <p>La dernière colonne reprend la mesure du papier BAF. Le seuil fixé en validation laisse passer plus de 5 % de faux positifs sur le test pour LightGBM : la distribution des scores dérive d'un mois à l'autre.</p>
-  <h3>Équité entre groupes d'âge</h3>
-  <p>Refuser à tort une demande légitime pénalise un client. Le papier compare donc les taux de faux positifs des 50 ans et plus et des autres : le ratio vaut 1 quand les deux groupes sont signalés à tort aussi souvent.</p>
+  <p>La dernière colonne reprend la mesure du papier BAF. Avec le seuil fixé en validation, LightGBM laisse passer plus de 5 % de faux positifs sur le test, parce que les scores dérivent d'un mois à l'autre.</p>
+
+  <h2>Équité selon l'âge</h2>
+  <p>Refuser à tort une demande légitime pénalise un client, donc le papier compare les taux de faux positifs des 50 ans et plus et des autres. Le ratio vaut 1 quand les deux groupes sont signalés à tort aussi souvent.</p>
   <table>
     <thead><tr><th>Variante</th><th>50 ans et plus</th><th>Moins de 50 ans</th><th>Ratio</th><th>Rappel</th></tr></thead>
     <tbody>$fairness_rows</tbody>
   </table>
-  <p>Un seuil par groupe égalise les faux positifs pour $mitigation_loss de rappel. Retirer l'âge ne suffit pas : d'autres variables portent la même information. Ce compromis se chiffre, mais il se décide avec le métier, la conformité et le juridique ; et aucune correction ne peut égaliser à la fois faux positifs, faux négatifs et calibration quand les taux de fraude diffèrent selon l'âge.</p>
+  <p>Un seuil par groupe égalise presque les faux positifs et coûte $mitigation_loss de rappel. Retirer l'âge ne suffit pas, d'autres variables portent la même information. Le compromis se mesure, mais c'est au métier, à la conformité et au juridique de le choisir. Et quand les taux de fraude diffèrent selon l'âge, aucune correction ne peut égaliser en même temps les faux positifs, les faux négatifs et la calibration.</p>
   <figure class="wide">
     <img src="figures/baf/tradeoff.png" alt="Rappel et ratio de faux positifs entre groupes d'âge pour le seuil unique, un seuil par groupe et le modèle sans l'âge.">
   </figure>
@@ -122,8 +123,8 @@
     <img src="figures/baf/fpr_by_age.png" alt="Part des demandes légitimes signalées par tranche d'âge, avec un seuil unique et un seuil par groupe.">
   </figure>
 
-  <h2>La dérive se voit sur BAF, pas sur le simulateur</h2>
-  <p>Le PSI compare la distribution d'une variable à une période de référence. Au-delà de 0,1, on surveille le taux d'alertes et la calibration ; au-delà de 0,25, on ré-entraîne et on recalcule le seuil. Sur le jeu carte, le PSI ne dépasse pas $max_weekly_psi d'une semaine à l'autre : le simulateur est stationnaire. Sur BAF, conçu avec une dérive temporelle, certaines variables franchissent les seuils d'alerte.</p>
+  <h2>Dérive</h2>
+  <p>Le PSI compare la distribution d'une variable à une période de référence. Au-delà de 0,1 on surveille le taux d'alertes et la calibration, au-delà de 0,25 on ré-entraîne et on recalcule le seuil. Sur le jeu carte, le PSI ne dépasse pas $max_weekly_psi d'une semaine à l'autre, le simulateur ne bouge pas. Sur BAF, $baf_drifting variables dépassent 0,25 sur les deux mois de test, surtout les vitesses de demandes. Le PSI du score ne dépasse pourtant pas $baf_score_psi, alors que les faux positifs montent à $baf_test_fpr au seuil fixé en validation. Le PSI calculé par déciles voit mal la queue de la distribution, là où se trouve le seuil, donc il faut aussi suivre le taux d'alertes.</p>
   <figure class="wide">
     <img src="figures/baf/psi_monthly.png" alt="PSI mensuel des variables de BAF les plus instables contre les mois d'entraînement.">
   </figure>
@@ -131,16 +132,16 @@
   <h2>Méthode</h2>
   <ol class="method">
     <li>1,8 M de transactions simulées d'après le Fraud Detection Handbook (ULB, 2022), avec ses trois scénarios de fraude.</li>
-    <li>Des features par fenêtres glissantes sur le client et le terminal ; celles du terminal ignorent les 7 derniers jours, dont les étiquettes ne sont pas encore connues. Deux tests le garantissent.</li>
+    <li>Des features par fenêtres glissantes sur le client et le terminal. Celles du terminal ignorent les 7 derniers jours, dont les étiquettes ne sont pas encore connues, et deux tests le vérifient.</li>
     <li>Chaque semaine, un modèle entraîné sur les 28 jours précédents dont les étiquettes sont connues score la semaine suivante.</li>
-    <li>Quatre semaines de validation pour tous les réglages, huit semaines de test pour les résultats, avec des intervalles de confiance par bootstrap sur les jours.</li>
+    <li>Quatre semaines de validation pour les réglages et huit semaines de test pour les résultats, avec des intervalles de confiance par bootstrap sur les jours.</li>
   </ol>
 
   <h2>Limites</h2>
   <ul class="limits">
-    <li>Les données carte sont simulées : les fraudes suivent des règles connues et les scores obtenus ne se transposent pas tels quels à des données réelles.</li>
-    <li>Les coûts sont des hypothèses : 10 € par contrôle, le montant pour une fraude manquée.</li>
-    <li>Pas de boucle de rétroaction : une transaction bloquée en production ne révèle jamais sa vraie étiquette.</li>
+    <li>Les données carte sont simulées : les fraudes suivent des règles connues, et les scores ne se transposent pas tels quels à de vraies données.</li>
+    <li>Les coûts sont des hypothèses, 10 € par contrôle et le montant pour une fraude manquée.</li>
+    <li>Il n'y a pas de boucle de rétroaction : en production, une transaction bloquée ne révèle jamais sa vraie étiquette.</li>
   </ul>
 
   <h2>Reproduire</h2>
@@ -149,7 +150,7 @@ cd fraudops
 make install data features report</pre>
 </main>
 <footer>
-  <p>Données carte simulées d'après Le Borgne, Siblini, Lebichot et Bontempi, <em>Reproducible Machine Learning for Credit Card Fraud Detection: Practical Handbook</em>, Université libre de Bruxelles, 2022. Jeu Bank Account Fraud : Jesus et al., NeurIPS 2022, non republié. Page générée à partir des résultats publiés dans le dépôt.</p>
+  <p>Données carte simulées d'après Le Borgne, Siblini, Lebichot et Bontempi, <em>Reproducible Machine Learning for Credit Card Fraud Detection: Practical Handbook</em>, Université libre de Bruxelles, 2022. Jeu Bank Account Fraud : Jesus et al., NeurIPS 2022, pas republié. Page générée à partir des résultats publiés dans le dépôt.</p>
 </footer>
 </body>
 </html>

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fraudops"
 version = "0.1.0"
-description = "Détection de fraude bancaire évaluée comme en production"
+description = "Détection de fraude bancaire (carte et ouverture de compte)"
 requires-python = ">=3.14"
 
 [tool.ruff]

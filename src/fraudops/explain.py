@@ -58,7 +58,7 @@ def main() -> None:
     MODEL_PATH.parent.mkdir(exist_ok=True)
     model.booster_.save_model(MODEL_PATH)
 
-    # The week after the training window: transactions the model has never seen.
+    # the week after the training window, never seen by the model
     week = features[features["tx_time_days"] >= DEPLOYMENT_DAY - 7]
     shap = shap_values(model, week)
     expected_loss = model.predict_proba(week[FEATURES])[:, 1] * week["tx_amount"]

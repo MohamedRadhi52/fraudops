@@ -110,6 +110,12 @@ def values() -> dict[str, str]:
     stopped = models["lightgbm_share_of_frauds_stopped"]
     example = explain["example"]
     weekly_psi = max(max(week.values()) for week in drift["weekly_psi"].values())
+    test_months = [baf["monthly_psi"]["mois 6"], baf["monthly_psi"]["mois 7"]]
+    drifting = [
+        name
+        for name in test_months[0]
+        if name != "score" and min(m[name] for m in test_months) >= 0.25
+    ]
     return {
         "cost_none_short": f"{number(cost['no_control']['cost'][0] / 1000, 0)} k€",
         "cost_rules_short": f"{number(cost['rules']['cost'][0] / 1000, 0)} k€",
@@ -138,6 +144,9 @@ def values() -> dict[str, str]:
         "fairness_rows": "".join(fairness_rows),
         "mitigation_loss": interval(fairness["mitigation_recall_loss"], 100, 1, " point"),
         "max_weekly_psi": number(weekly_psi, 3),
+        "baf_drifting": str(len(drifting)),
+        "baf_score_psi": number(max(month["score"] for month in test_months), 3),
+        "baf_test_fpr": percent(baf["models"]["lightgbm"]["fpr"][0]),
     }
 
 

@@ -64,7 +64,7 @@ def main() -> None:
 
     report = {"fraud_rate": test["tx_fraud"].mean()}
     for name in LABELS:
-        # Expected loss rule: investigate a card when probability x amount exceeds the control cost.
+        # control the card when probability x amount is above the cost of a control
         expected_loss = test.assign(expected_loss=test[name] * test["tx_amount"])
         report[name] = {
             "brier": brier_score_loss(test["tx_fraud"], test[name]),

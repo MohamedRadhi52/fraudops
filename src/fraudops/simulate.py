@@ -63,7 +63,7 @@ def genuine_transactions(
     """
     mean_nb_tx = customers["mean_nb_tx_per_day"].to_numpy()
     counts = rng.poisson(mean_nb_tx[:, None], (len(customers), nb_days))
-    # One row per transaction: each (customer, day) pair is repeated as many times as its count.
+    # repeat each (customer, day) pair once per transaction
     customer_id, day = np.indices(counts.shape).reshape(2, -1).repeat(counts.ravel(), axis=1)
 
     seconds = rng.normal(SECONDS_PER_DAY / 2, 20_000, len(day)).astype(np.int64)
@@ -77,7 +77,7 @@ def genuine_transactions(
     negative = amount < 0
     amount[negative] = rng.uniform(0, 2 * mean[negative])
 
-    # All nearby terminals in one flat array: a customer's terminals start at offsets[customer].
+    # all nearby terminals in one flat array, a customer's list starts at offsets[customer]
     offsets = np.cumsum(n_nearby) - n_nearby
     terminal_id = np.concatenate(nearby)[offsets[customer_id] + rng.integers(n_nearby[customer_id])]
 
@@ -91,7 +91,7 @@ def genuine_transactions(
         }
     ).sort_values("tx_time_seconds", kind="stable", ignore_index=True)
     tx.insert(0, "transaction_id", np.arange(len(tx)))
-    # Microseconds: Spark cannot read the nanosecond timestamps that pandas uses by default.
+    # Spark can't read the nanosecond timestamps pandas uses by default
     datetime = pd.Timestamp(start_date) + pd.to_timedelta(tx["tx_time_seconds"], "s")
     tx.insert(1, "tx_datetime", datetime.astype("datetime64[us]"))
     return tx

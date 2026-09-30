@@ -29,7 +29,7 @@ def rules(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
         + (test["terminal_risk_7d"] > 0)
         + (test["tx_amount"] > 3 * test["customer_avg_amount_30d"])
     )
-    # Amounts stay far below 10,000 euros: they only break ties between rule counts.
+    # amount / 10 000 stays below 1, so it only breaks ties between rule counts
     return (triggered + test["tx_amount"] / 10_000).to_numpy()
 
 
@@ -44,7 +44,7 @@ def fit_lightgbm(train: pd.DataFrame, params: dict) -> LGBMClassifier:
     """LightGBM stopped early on the last week of the training window."""
     last_week = train["tx_time_days"] > train["tx_time_days"].max() - 7
     fit, stop = train[~last_week], train[last_week]
-    # deterministic: the same results whatever the number of threads of the machine.
+    # deterministic so the results don't depend on the number of threads
     model = LGBMClassifier(
         n_estimators=1000, deterministic=True, force_row_wise=True, verbose=-1, **params
     )

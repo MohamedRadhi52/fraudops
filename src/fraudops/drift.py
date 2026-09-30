@@ -80,7 +80,7 @@ def main() -> None:
     features = pd.read_parquet(FEATURES_PATH)
     scores = pd.read_parquet(SCORES_PATH, columns=["transaction_id", "period"])
     scores = scores.merge(features, on="transaction_id")
-    # One frozen model: retraining every week would change the score scale by itself.
+    # frozen model, weekly retraining alone would shift the scale of the scores
     params = json.loads((REPORT_DIR / "models.json").read_text())["lightgbm_params"]
     train, _ = split(features, VALIDATION_WEEKS[0])
     scores["score LightGBM"] = fit_lightgbm(train, params).predict_proba(scores[FEATURES])[:, 1]

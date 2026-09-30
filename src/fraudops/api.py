@@ -72,7 +72,7 @@ def score(transaction: Transaction) -> Score:
     features = model.feature_name()
     row = np.array([[getattr(transaction, name) for name in features]])
     probability = float(model.predict(row)[0])
-    # TreeSHAP contributions in log-odds, the last column being the bias.
+    # SHAP contributions in log-odds, the last column is the bias
     contributions = model.predict(row, pred_contrib=True)[0, :-1]
     top = np.argsort(contributions)[::-1][:3]
     expected_loss = probability * transaction.tx_amount
